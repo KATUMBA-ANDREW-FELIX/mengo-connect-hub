@@ -14,16 +14,342 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      applications: {
+        Row: {
+          applicant_name: string
+          application_pdf: string | null
+          average_score: number
+          class: string
+          created_at: string
+          id: string
+          profile_pic: string | null
+          status: string
+        }
+        Insert: {
+          applicant_name: string
+          application_pdf?: string | null
+          average_score: number
+          class: string
+          created_at?: string
+          id?: string
+          profile_pic?: string | null
+          status?: string
+        }
+        Update: {
+          applicant_name?: string
+          application_pdf?: string | null
+          average_score?: number
+          class?: string
+          created_at?: string
+          id?: string
+          profile_pic?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      ballots: {
+        Row: {
+          candidates_json: Json
+          created_at: string
+          created_by: string
+          editable: boolean
+          election_title: string
+          id: string
+          pdf_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          candidates_json?: Json
+          created_at?: string
+          created_by: string
+          editable?: boolean
+          election_title: string
+          id?: string
+          pdf_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          candidates_json?: Json
+          created_at?: string
+          created_by?: string
+          editable?: boolean
+          election_title?: string
+          id?: string
+          pdf_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          category: string | null
+          created_at: string
+          file_url: string
+          id: string
+          title: string
+          uploaded_by: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          file_url: string
+          id?: string
+          title: string
+          uploaded_by: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          file_url?: string
+          id?: string
+          title?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      issues: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          raised_by: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          raised_by: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          raised_by?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          class: string | null
+          created_at: string
+          full_name: string
+          id: string
+          profile_pic_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          class?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          profile_pic_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          class?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          profile_pic_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      programmes: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          event_date: string | null
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          event_date?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          event_date?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      requisitions: {
+        Row: {
+          amount: number
+          approved_by: string | null
+          created_at: string
+          id: string
+          item: string
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          item: string
+          requested_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          item?: string
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rotas: {
+        Row: {
+          created_at: string
+          created_by: string
+          duties: Json
+          id: string
+          updated_at: string
+          week: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          duties?: Json
+          id?: string
+          updated_at?: string
+          week: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          duties?: Json
+          id?: string
+          updated_at?: string
+          week?: string
+        }
+        Relationships: []
+      }
+      student_voices: {
+        Row: {
+          category: string
+          comments: string | null
+          created_at: string
+          description: string
+          evaluated_by: string | null
+          file_url: string | null
+          id: string
+          status: string
+          submitted_by: string | null
+          submitted_class: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          comments?: string | null
+          created_at?: string
+          description: string
+          evaluated_by?: string | null
+          file_url?: string | null
+          id?: string
+          status?: string
+          submitted_by?: string | null
+          submitted_class?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          comments?: string | null
+          created_at?: string
+          description?: string
+          evaluated_by?: string | null
+          file_url?: string | null
+          id?: string
+          status?: string
+          submitted_by?: string | null
+          submitted_class?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_councillor: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "patron"
+        | "chairperson"
+        | "vice_chairperson"
+        | "speaker"
+        | "deputy_speaker"
+        | "general_secretary"
+        | "assistant_general_secretary"
+        | "secretary_finance"
+        | "secretary_welfare"
+        | "secretary_health"
+        | "secretary_women_affairs"
+        | "secretary_publicity"
+        | "secretary_pwd"
+        | "electoral_commission"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +476,23 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "patron",
+        "chairperson",
+        "vice_chairperson",
+        "speaker",
+        "deputy_speaker",
+        "general_secretary",
+        "assistant_general_secretary",
+        "secretary_finance",
+        "secretary_welfare",
+        "secretary_health",
+        "secretary_women_affairs",
+        "secretary_publicity",
+        "secretary_pwd",
+        "electoral_commission",
+      ],
+    },
   },
 } as const
