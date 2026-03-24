@@ -62,7 +62,7 @@ export default function ElectionsPage() {
   };
 
   const fetchGrants = async () => {
-    const { data } = await supabase.from("ec_access_grants").select("*");
+    const { data } = await (supabase as any).from("ec_access_grants").select("*");
     setGrants(data || []);
   };
 
