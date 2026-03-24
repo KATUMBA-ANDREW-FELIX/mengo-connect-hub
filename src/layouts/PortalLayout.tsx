@@ -57,7 +57,7 @@ export default function PortalLayout() {
   // Check if user has EC access grant
   useEffect(() => {
     if (!user) return;
-    supabase.from("ec_access_grants").select("id").eq("granted_to", user.id).then(({ data }) => {
+    (supabase as any).from("ec_access_grants").select("id").eq("granted_to", user.id).then(({ data }: any) => {
       if (data && data.length > 0) setEcGranted(true);
     });
   }, [user]);
