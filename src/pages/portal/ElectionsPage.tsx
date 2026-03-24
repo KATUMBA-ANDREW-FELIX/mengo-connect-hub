@@ -127,7 +127,7 @@ export default function ElectionsPage() {
   };
 
   const revokeAccess = async (id: string) => {
-    await supabase.from("ec_access_grants").delete().eq("id", id);
+    await (supabase as any).from("ec_access_grants").delete().eq("id", id);
     toast.success("Access revoked");
     fetchGrants();
   };
