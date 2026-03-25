@@ -33,6 +33,9 @@ const sidebarLinks: NavItem[] = [
     roles: ["patron", "chairperson", "secretary_finance"] },
   { label: "Elections", path: "/portal/elections", icon: Vote,
     roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
+  { label: "Hierarchy", path: "/portal/hierarchy", icon: Network },
+  { label: "Logs", path: "/portal/logs", icon: Activity,
+    roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
 ];
 
 const ROLE_LABELS: Record<AppRole, string> = {
