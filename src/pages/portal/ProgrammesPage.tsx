@@ -59,7 +59,7 @@ export default function ProgrammesPage() {
     setSubmitting(false);
     if (error) toast.error(error.message);
     else {
-      toast.success("Programme added");
+      toast.success("Programme added"); log("added a programme", "programmes", title); notifyAllCouncillors("New Programme", `"${title}" was added`, "info");
       setTitle(""); setDescription(""); setEventDate("");
       setOpen(false);
     }

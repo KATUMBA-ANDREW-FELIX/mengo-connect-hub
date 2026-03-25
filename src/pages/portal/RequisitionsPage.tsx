@@ -64,7 +64,7 @@ export default function RequisitionsPage() {
     if (!user) return;
     const { error } = await supabase.from("requisitions").update({ status, approved_by: user.id }).eq("id", id);
     if (error) toast.error(error.message);
-    else toast.success(`Request ${status}`);
+    else { toast.success(`Request ${status}`); log(`${status} a requisition`, "requisitions"); }
   };
 
   return (

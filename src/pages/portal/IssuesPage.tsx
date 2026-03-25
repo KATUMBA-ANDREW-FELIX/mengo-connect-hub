@@ -51,7 +51,7 @@ export default function IssuesPage() {
     });
     setSubmitting(false);
     if (error) toast.error(error.message);
-    else { toast.success("Issue raised"); setTitle(""); setDescription(""); setOpen(false); }
+    else { toast.success("Issue raised"); log("raised an issue", "issues", title); notifyAllCouncillors("New Issue", `"${title}" was raised`, "warning"); setTitle(""); setDescription(""); setOpen(false); }
   };
 
   return (
