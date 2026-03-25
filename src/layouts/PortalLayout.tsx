@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
-  MessageSquare, DollarSign, Vote, LogOut, Menu, X,
+  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
