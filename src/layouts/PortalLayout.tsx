@@ -169,6 +169,7 @@ export default function PortalLayout() {
             <h2 className="font-serif text-sm font-semibold text-foreground sm:text-base">Portal</h2>
           </div>
           <div className="flex items-center gap-1">
+            <NotificationsBell />
             <Button variant="ghost" size="sm" className="text-xs h-8" asChild>
               <Link to="/">← Home</Link>
             </Button>
