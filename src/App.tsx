@@ -17,6 +17,8 @@ import DocumentsPage from "@/pages/portal/DocumentsPage";
 import RequisitionsPage from "@/pages/portal/RequisitionsPage";
 import ElectionsPage from "@/pages/portal/ElectionsPage";
 import StudentVoicesPage from "@/pages/portal/StudentVoicesPage";
+import HierarchyPage from "@/pages/portal/HierarchyPage";
+import ActivityLogsPage from "@/pages/portal/ActivityLogsPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
