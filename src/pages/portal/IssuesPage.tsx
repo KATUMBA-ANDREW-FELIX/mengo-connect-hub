@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActivityLog } from "@/hooks/useActivityLog";
+import { notifyAllCouncillors } from "@/hooks/useNotify";
 
 interface Issue {
   id: string; title: string; description: string; status: string;
