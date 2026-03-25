@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActivityLog } from "@/hooks/useActivityLog";
+import { notifyAllCouncillors } from "@/hooks/useNotify";
 
 interface Requisition {
   id: string; item: string; amount: number; requested_by: string;
