@@ -10,6 +10,7 @@ import mengoBadge from "@/assets/mengo-badge.jpg";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import NotificationsBell from "@/components/portal/NotificationsBell";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
