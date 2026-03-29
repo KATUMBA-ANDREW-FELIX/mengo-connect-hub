@@ -15,7 +15,7 @@ export default function PublicLayout() {
           </p>
           <p className="mt-1 text-sm">Kampala, Uganda • Building Leaders for Tomorrow</p>
           <p className="mt-4 text-xs text-primary-foreground/50">
-            © {new Date().getFullYear()} Mengo Councillors. All rights reserved.
+            © 2025/26 mengo councillors. All rights reserved.
           </p>
         </div>
       </footer>

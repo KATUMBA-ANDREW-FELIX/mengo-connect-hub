@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserPlus, ArrowUpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
 const ROLE_LABELS: Record<string, string> = {
-  patron: "Patron",
+  councillor: "Councillor",
   chairperson: "Chairperson",
   vice_chairperson: "Vice Chairperson",
   speaker: "Speaker",
@@ -20,7 +21,7 @@ const ROLE_LABELS: Record<string, string> = {
   secretary_health: "Secretary Health",
   secretary_women_affairs: "Secretary Women Affairs",
   secretary_publicity: "Secretary Publicity",
-  secretary_pwd: "Secretary Persons with Disabilities",
+  secretary_pwd: "Secretary PWD",
   electoral_commission: "Electoral Commission",
 };
 
@@ -34,6 +35,33 @@ export default function RegisterMemberPage() {
   const [fullName, setFullName] = useState("");
   const [studentClass, setStudentClass] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
+
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [upgradeUserId, setUpgradeUserId] = useState("");
+  const [upgradeRole, setUpgradeRole] = useState("");
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+
+  useEffect(() => {
+    api.get("/users/all-profiles/")
+      .then(res => setProfiles(Array.isArray(res.data) ? res.data : (res.data.results || [])))
+      .catch(() => {});
+  }, []);
+
+  const handleUpgrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!upgradeUserId || !upgradeRole) { toast.error("Select both user and role"); return; }
+    setUpgradeLoading(true);
+    try {
+      await api.post("/users/upgrade-role/", { user_id: upgradeUserId, new_role: upgradeRole });
+      toast.success("Member role upgraded successfully!");
+      setUpgradeUserId("");
+      setUpgradeRole("");
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Upgrade failed");
+    } finally {
+      setUpgradeLoading(false);
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,13 +101,20 @@ export default function RegisterMemberPage() {
   return (
     <div className="mx-auto max-w-lg">
       <div className="mb-6">
-        <h1 className="font-serif text-2xl font-bold">Register New Member</h1>
+        <h1 className="font-serif text-2xl font-bold">Manage Members</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Create a portal account for a new council member.
+          Register new council members or upgrade a councillor to leadership.
         </p>
       </div>
 
-      <form onSubmit={handleRegister} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+      <Tabs defaultValue="register">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="register">Register Member</TabsTrigger>
+          <TabsTrigger value="upgrade">Upgrade Role</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="register">
+          <form onSubmit={handleRegister} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
         <div className="space-y-2">
           <Label htmlFor="fullName">Full Name *</Label>
           <Input id="fullName" placeholder="e.g. Nakamya Faith" value={fullName} onChange={(e) => setFullName(e.target.value)} />
@@ -120,10 +155,51 @@ export default function RegisterMemberPage() {
         </div>
 
         <Button type="submit" className="w-full" disabled={loading}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          {loading ? "Registering..." : "Register Member"}
-        </Button>
-      </form>
+            <UserPlus className="mr-2 h-4 w-4" />
+            {loading ? "Registering..." : "Register Member"}
+          </Button>
+        </form>
+      </TabsContent>
+
+      <TabsContent value="upgrade">
+        <form onSubmit={handleUpgrade} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+          <div className="space-y-2">
+            <Label>Select Existing Member</Label>
+            <Select value={upgradeUserId} onValueChange={setUpgradeUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Search member..." />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map(p => (
+                  <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>New Leadership Position</Label>
+            <Select value={upgradeRole} onValueChange={setUpgradeRole}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select new role..." />
+              </SelectTrigger>
+              <SelectContent>
+                {APP_ROLES.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {ROLE_LABELS[role]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button type="submit" className="w-full" disabled={upgradeLoading}>
+            <ArrowUpCircle className="mr-2 h-4 w-4" />
+            {upgradeLoading ? "Upgrading..." : "Upgrade Member"}
+          </Button>
+        </form>
+      </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -21,8 +21,8 @@ import StudentVoicesPage from "@/pages/portal/StudentVoicesPage";
 import HierarchyPage from "@/pages/portal/HierarchyPage";
 import ActivityLogsPage from "@/pages/portal/ActivityLogsPage";
 import RegisterMemberPage from "@/pages/portal/RegisterMemberPage";
+import BlogManagerPage from "@/pages/portal/BlogManagerPage";
 import NotFound from "./pages/NotFound.tsx";
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -58,6 +58,11 @@ const App = () => (
               {/* Requisitions – finance chain */}
               <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "secretary_finance"]} />}>
                 <Route path="requisitions" element={<RequisitionsPage />} />
+              </Route>
+
+              {/* Blogs – publicity chain */}
+              <Route element={<RoleGuard allowedRoles={["chairperson", "secretary_publicity"]} />}>
+                <Route path="blog" element={<BlogManagerPage />} />
               </Route>
 
               {/* Elections – leadership & EC */}

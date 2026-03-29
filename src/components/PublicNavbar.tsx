@@ -18,7 +18,7 @@ export function PublicNavbar() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-3">
           <img src={mengoBadge} alt="Mengo Senior School" className="h-10 w-10 rounded-full object-cover" />
-          <span className="font-serif text-lg font-bold text-primary">Mengo Councillors</span>
+          <span className="font-serif text-lg font-bold text-primary">MENGO STUDENTS' COUNCIL BODY</span>
         </Link>
 
         {/* Desktop */}

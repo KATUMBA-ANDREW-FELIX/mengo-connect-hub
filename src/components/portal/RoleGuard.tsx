@@ -12,10 +12,10 @@ interface RoleGuardProps {
  * user does not have any of the `allowedRoles`.
  */
 export default function RoleGuard({ allowedRoles }: RoleGuardProps) {
-  const { roles, loading } = useAuth();
+  const { loading, hasAnyRole } = useAuth();
   const location = useLocation();
 
-  const isAllowed = roles.some((r) => allowedRoles.includes(r));
+  const isAllowed = hasAnyRole(allowedRoles);
 
   useEffect(() => {
     if (!loading && !isAllowed) {

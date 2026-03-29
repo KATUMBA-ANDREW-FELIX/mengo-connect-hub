@@ -3,6 +3,49 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageSquare } from "lucide-react";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { WhoWeAre, CabinetGrid } from "@/components/CabinetSection";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+
+function PublicBlogSection() {
+  const [blogs, setBlogs] = useState<any[]>([]);
+  useEffect(() => {
+    api.get("/blogs/").then(({ data }) => setBlogs(data.results || [])).catch(() => {});
+  }, []);
+
+  if (blogs.length === 0) return null;
+
+  return (
+    <section className="bg-muted/30 py-12 sm:py-16">
+      <div className="container mx-auto px-4">
+        <div className="mb-8 text-center">
+          <h2 className="font-serif text-2xl font-bold sm:text-3xl">Pillar News & Announcements</h2>
+          <p className="text-sm text-muted-foreground mt-2">Updates from the Publicity Office</p>
+        </div>
+        <div className="mx-auto max-w-4xl space-y-4">
+          {blogs.map(b => (
+            <div key={b.id} className="rounded-xl border bg-card p-5 shadow-sm">
+              <h3 className="font-bold text-lg">{b.title}</h3>
+              <p className="text-xs text-primary mb-3 font-medium">{b.author} • {new Date(b.created_at).toLocaleDateString()}</p>
+              
+              {b.media_url && b.media_type === "image" && (
+                <div className="my-4 overflow-hidden rounded-lg bg-muted text-center border shadow-sm">
+                  <img src={b.media_url} alt="Blog Attachment" className="max-h-[60vh] w-full object-contain mx-auto" />
+                </div>
+              )}
+              {b.media_url && b.media_type === "video" && (
+                <div className="my-4 overflow-hidden rounded-lg bg-muted border shadow-sm flex justify-center">
+                  <video src={b.media_url} controls className="max-h-[60vh] w-full max-w-3xl" />
+                </div>
+              )}
+
+              <p className="text-card-foreground text-sm leading-relaxed whitespace-pre-wrap">{b.content}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function HomePage() {
   return (
@@ -31,6 +74,7 @@ export default function HomePage() {
         </div>
       </section>
 
+      <PublicBlogSection />
       <WhoWeAre />
       <CabinetGrid />
 

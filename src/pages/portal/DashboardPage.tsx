@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 import {
   AlertTriangle, Calendar, FileText, MessageSquare, DollarSign,
   TrendingUp, CheckCircle, Clock, Shield, Heart, Stethoscope,
-  Megaphone, Accessibility, Users, Vote, Gavel, UserCheck, type LucideIcon
+  Megaphone, Accessibility, Users, Vote, Gavel, UserCheck, Loader2, type LucideIcon
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -39,7 +45,8 @@ interface FinanceItem {
   l: string;
 }
 
-const ROLE_INFO: Record<AppRole, RoleInfo> = {
+const ROLE_INFO: Record<string, RoleInfo> = {
+  adminabsolute: { title: "Admin Absolute", icon: Shield, color: "text-red-500", responsibilities: ["Full system access", "Bypass all restrictions", "Manage everything"] },
   patron: { title: "Patron", icon: Shield, color: "text-gold", responsibilities: ["Overall oversight and guidance", "Approve requisitions", "Mentor council leadership", "Liaise with administration"] },
   chairperson: { title: "Chairperson", icon: UserCheck, color: "text-primary", responsibilities: ["Lead the Student Council", "Oversee all offices", "Represent students", "Coordinate with Patron"] },
   vice_chairperson: { title: "Vice Chairperson", icon: UserCheck, color: "text-primary", responsibilities: ["Act as Chairperson when absent", "Assist in coordination", "Supervise delegated projects"] },
@@ -60,6 +67,13 @@ export default function DashboardPage() {
   const { profile, roles, hasAnyRole } = useAuth();
   const primaryRole = roles[0];
   const info = primaryRole ? ROLE_INFO[primaryRole] : null;
+
+  const [profileName, setProfileName] = useState(profile?.full_name || "");
+  const [profileDesc, setProfileDesc] = useState((profile as any)?.description || "");
+  const [profilePic, setProfilePic] = useState((profile as any)?.profile_pic || "");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const canEditName = hasAnyRole(["chairperson", "patron", "adminabsolute"]);
+
   const showFinance = hasAnyRole(["patron", "chairperson", "secretary_finance"]);
   const showVoices = hasAnyRole(["patron", "chairperson", "general_secretary", "assistant_general_secretary"]) || roles.length === 0;
   const showAllProgress = hasAnyRole(["patron", "chairperson"]) || roles.length === 0;
@@ -96,7 +110,21 @@ export default function DashboardPage() {
     };
     
     fetchDashboardData();
-  }, []);
+  }, [profile]);
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const payload: any = { description: profileDesc, profile_pic: profilePic };
+      if (canEditName) payload.full_name = profileName;
+      await api.patch('/users/me/profile/', payload);
+      toast.success("Profile updated globally! (Refresh to see header update)");
+    } catch(e) {
+      toast.error("Failed to update profile");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const stats = dashboardData?.stats || [
     { label: "Voices", value: "...", icon: MessageSquare, color: "text-primary", change: "..." },
@@ -143,6 +171,14 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      <Tabs defaultValue="overview" className="mt-4">
+        <TabsList className="mb-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="profile">Profile Settings</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-4">
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -253,6 +289,48 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+          </TabsContent>
+          <TabsContent value="profile">
+            <Card className="max-w-xl">
+              <CardHeader>
+                <CardTitle>Edit Your Profile</CardTitle>
+                <CardDescription>Update your public information.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <Input 
+                    value={profileName} 
+                    onChange={e => setProfileName(e.target.value)} 
+                    disabled={!canEditName} 
+                  />
+                  {!canEditName && <p className="text-xs text-muted-foreground">Only Admins can change official names.</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Profile Picture URL</Label>
+                  <Input 
+                    value={profilePic} 
+                    onChange={e => setProfilePic(e.target.value)} 
+                    placeholder="https://example.com/photo.jpg" 
+                  />
+                  {profilePic && <img src={profilePic} alt="Preview" className="h-16 w-16 rounded-full border object-cover mt-2" />}
+                </div>
+                <div className="space-y-2">
+                  <Label>Introduction / Bio</Label>
+                  <Textarea 
+                    value={profileDesc} 
+                    onChange={e => setProfileDesc(e.target.value)} 
+                    rows={4} 
+                    placeholder="Tell the school about yourself..." 
+                  />
+                </div>
+                <Button onClick={handleSaveProfile} disabled={savingProfile}>
+                  {savingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Profile
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
     </div>
   );
 }

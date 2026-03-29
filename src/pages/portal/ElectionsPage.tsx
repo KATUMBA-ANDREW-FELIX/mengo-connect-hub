@@ -5,19 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Vote, UserCheck, Settings2, Download, Plus, ShieldCheck } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import jsPDF from "jspdf";
+import mengoBadge from "@/assets/mengo-badge.jpg";
+import { unsaLogoB64 } from "@/assets/unsaBase64";
 
 interface Applicant {
   id: string;
   applicant_name: string;
   class: string;
   stream?: string;
-  average_score: number;
+  average_score: number; // Serves as the Total / 30
+  smart_score?: number;
+  conf_score?: number;
+  qapp_score?: number;
+  comment?: string;
   gender: string;
   status: string;
 }
@@ -26,7 +32,7 @@ export default function ElectionsPage() {
   const { user, hasAnyRole } = useAuth();
   const isTopHead = hasAnyRole(["patron", "chairperson", "speaker", "electoral_commission"]);
 
-  const [minAverage, setMinAverage] = useState(70);
+  const [minAverage, setMinAverage] = useState(15);
   const [electionTitle, setElectionTitle] = useState("S.2 Councillors 2026");
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +44,28 @@ export default function ElectionsPage() {
   const [newClass, setNewClass] = useState("");
   const [newStream, setNewStream] = useState("");
   const [newGender, setNewGender] = useState("male");
-  const [newAverage, setNewAverage] = useState("");
+  const [newSmart, setNewSmart] = useState("");
+  const [newConf, setNewConf] = useState("");
+  const [newQapp, setNewQapp] = useState("");
+  const [newComment, setNewComment] = useState("");
+
+  // Filtering
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterClass, setFilterClass] = useState("all");
+  const [filterStream, setFilterStream] = useState("all");
+  const [filterGender, setFilterGender] = useState("all");
+  const [computedAverage, setComputedAverage] = useState<number | null>(null);
+
+  // Edit Candidate
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editClass, setEditClass] = useState("");
+  const [editStream, setEditStream] = useState("");
+  const [editGender, setEditGender] = useState("male");
+  const [editSmart, setEditSmart] = useState("");
+  const [editConf, setEditConf] = useState("");
+  const [editQapp, setEditQapp] = useState("");
+  const [editComment, setEditComment] = useState("");
 
   // EC access delegation
   const [grants, setGrants] = useState<any[]>([]);
@@ -73,35 +100,115 @@ export default function ElectionsPage() {
     if (isTopHead) { fetchGrants(); fetchProfiles(); }
   }, []);
 
-  const qualified = applicants.filter((a) => a.status === "qualified").length;
-  const disqualified = applicants.filter((a) => a.status === "disqualified").length;
+  const filteredApplicants = applicants.filter((a) => {
+    let match = true;
+    if (filterSearch && !a.applicant_name.toLowerCase().includes(filterSearch.toLowerCase())) match = false;
+    if (filterClass !== "all" && a.class?.toLowerCase() !== filterClass.toLowerCase()) match = false;
+    if (filterStream !== "all" && (a as any).stream?.toLowerCase() !== filterStream.toLowerCase()) match = false;
+    if (filterGender !== "all" && a.gender?.toLowerCase() !== filterGender) match = false;
+    return match;
+  });
+
+  const uniqueClasses = Array.from(new Set(applicants.map(a => a.class).filter(Boolean)));
+  const uniqueStreams = Array.from(new Set(applicants.map(a => (a as any).stream).filter(Boolean)));
+
+  const qualified = filteredApplicants.filter((a) => a.status === "qualified").length;
+  const disqualified = filteredApplicants.filter((a) => a.status === "disqualified").length;
+
+  const handleComputeAverage = () => {
+    if (filteredApplicants.length === 0) {
+      toast.error("No candidates in current filter");
+      return;
+    }
+    const total = filteredApplicants.reduce((sum, a) => sum + a.average_score, 0);
+    const avg = Math.round(total / filteredApplicants.length);
+    setComputedAverage(avg);
+    setMinAverage(avg);
+    toast.success(`Computed Avg Total: ${avg}/30. Set as new screening minimum!`);
+  };
 
   const handleAddCandidate = async () => {
-    if (!newName || !newClass || !newGender || !newAverage) {
+    if (!newName || !newClass || !newGender || !newSmart || !newConf || !newQapp) {
       toast.error("Fill all required fields"); return;
     }
+    const totalScore = Number(newSmart) + Number(newConf) + Number(newQapp);
     try {
       await api.post("/applications/", {
         applicant_name: newName,
-        applicant_class: newClass, // Using _class keyword workaround
+        applicant_class: newClass,
         stream: newStream || null,
         gender: newGender,
-        average_score: Number(newAverage),
+        smart_score: Number(newSmart),
+        conf_score: Number(newConf),
+        qapp_score: Number(newQapp),
+        comment: newComment || null,
+        average_score: totalScore,
         status: "pending",
       });
       toast.success("Candidate added!");
       setAddOpen(false);
-      setNewName(""); setNewClass(""); setNewStream(""); setNewGender("male"); setNewAverage("");
+      setNewName(""); setNewClass(""); setNewStream(""); 
+      setNewGender("male"); setNewSmart(""); setNewConf(""); setNewQapp(""); setNewComment("");
       fetchApplicants();
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Failed to add candidate");
     }
   };
 
+  const openEditModal = (a: any) => {
+    setEditingId(a.id);
+    setEditName(a.applicant_name);
+    setEditClass(a.class || "");
+    setEditStream(a.stream || "");
+    setEditGender(a.gender || "male");
+    setEditSmart(a.smart_score?.toString() || "");
+    setEditConf(a.conf_score?.toString() || "");
+    setEditQapp(a.qapp_score?.toString() || "");
+    setEditComment(a.comment || "");
+  };
+
+  const saveEditCandidate = async () => {
+    if (!editingId) return;
+    const smart = Number(editSmart || 0);
+    const conf = Number(editConf || 0);
+    const qapp = Number(editQapp || 0);
+    const average_score = smart + conf + qapp;
+
+    try {
+      await api.patch(`/applications/${editingId}/`, {
+        applicant_name: editName,
+        class: editClass,
+        stream: editStream,
+        gender: editGender,
+        smart_score: smart,
+        conf_score: conf,
+        qapp_score: qapp,
+        average_score,
+        comment: editComment
+      });
+      toast.success("Candidate updated!");
+      setEditingId(null);
+      fetchApplicants();
+    } catch(e) {
+      toast.error("Failed to update candidate");
+    }
+  };
+
+  const handleDeleteCandidate = async (id: string) => {
+    if (!confirm("Are you sure you want to completely remove this candidate?")) return;
+    try {
+      await api.delete(`/applications/${id}/`);
+      toast.success("Candidate removed");
+      fetchApplicants();
+    } catch (e) {
+      toast.error("Failed to delete candidate");
+    }
+  };
+
   const handleAutoScreen = async () => {
     try {
       await api.post("/applications/auto-screen/", { min_average: minAverage });
-      toast.success(`Screened at ${minAverage}% minimum`);
+      toast.success(`Screened using min target of ${minAverage}/30`);
       fetchApplicants();
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Failed to autoscreen");
@@ -142,9 +249,21 @@ export default function ElectionsPage() {
     }
   };
 
+  const getDynamicTitle = () => {
+    let parts = [];
+    if (filterClass !== "all") parts.push(filterClass);
+    if (filterStream !== "all") parts.push(filterStream);
+    if (filterGender !== "all") parts.push(filterGender);
+    
+    if (parts.length > 0) {
+       return `${parts.join(" ")} - ${electionTitle}`.toUpperCase();
+    }
+    return electionTitle.toUpperCase();
+  };
+
   const generateBallotPDF = () => {
-    const qual = applicants.filter((a) => a.status === "qualified");
-    if (!qual.length) { toast.error("No qualified applicants"); return; }
+    const qual = filteredApplicants.filter((a) => a.status === "qualified");
+    if (!qual.length) { toast.error("No qualified applicants in current filter"); return; }
     const males = qual.filter((a) => a.gender === "male");
     const females = qual.filter((a) => a.gender === "female");
 
@@ -165,7 +284,7 @@ export default function ElectionsPage() {
     doc.setFont("helvetica", "bold"); doc.setFontSize(16);
     doc.text("OFFICIAL BALLOT PAPER", pageW / 2, y, { align: "center" });
     y += 7; doc.setFontSize(13);
-    doc.text(electionTitle.toUpperCase(), pageW / 2, y, { align: "center" });
+    doc.text(getDynamicTitle(), pageW / 2, y, { align: "center" });
     y += 6; doc.setFont("helvetica", "normal"); doc.setFontSize(9);
     doc.setTextColor(80);
     doc.text("Instructions: Tick (\u2713) ONE candidate in each category.", pageW / 2, y, { align: "center" });
@@ -211,8 +330,93 @@ export default function ElectionsPage() {
     doc.text("Electoral Commission — Mengo Senior School Student Council", pageW / 2, y, { align: "center" });
     y += 4;
     doc.text(`Generated on ${new Date().toLocaleDateString("en-UG", { day: "numeric", month: "long", year: "numeric" })}`, pageW / 2, y, { align: "center" });
-    doc.save(`Ballot_${electionTitle.replace(/\s+/g, "_")}.pdf`);
+    doc.save(`Ballot_${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
     toast.success("Ballot PDF downloaded!");
+  };
+
+  const generateScreeningReportPDF = async () => {
+    const qual = filteredApplicants;
+    if (!qual.length) { toast.error("No candidates in current filter"); return; }
+    
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 15;
+
+    const addImageToDoc = (src: string, x: number, y: number, w: number, h: number, format: string) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.src = src;
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+          doc.addImage(img, format, x, y, w, h);
+          resolve();
+        };
+        img.onerror = () => resolve();
+      });
+    };
+
+    try {
+      await Promise.all([
+        addImageToDoc(mengoBadge, 15, 10, 25, 25, "JPEG"),
+        addImageToDoc(unsaLogoB64, pageW - 40, 10, 25, 25, "PNG")
+      ]);
+    } catch(e) {
+      console.error("Failed to load PDF images:", e);
+    }
+
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
+    y += 6; doc.setFontSize(12);
+    doc.text(getDynamicTitle(), pageW / 2, y, { align: "center" });
+    y += 6; doc.setFontSize(11);
+    doc.text("SCREENING EVALUATION TOOL", pageW / 2, y, { align: "center" });
+    y += 6; doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text(`Election: ${getDynamicTitle()}    Threshold: ${minAverage}/30`, pageW / 2, y, { align: "center" });
+    y += 8;
+
+    const m = 15;
+    doc.setFillColor(41, 128, 185);
+    doc.rect(m, y, pageW - m * 2, 8, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
+    
+    doc.text("No.", m + 3, y + 5);
+    doc.text("Name", m + 15, y + 5);
+    doc.text("Class/Stream", m + 60, y + 5);
+    doc.text("Smart /10", m + 100, y + 5);
+    doc.text("Conf /10", m + 120, y + 5);
+    doc.text("Q.App /10", m + 140, y + 5);
+    doc.text("Total /30", m + 160, y + 5);
+    doc.text("%", m + 180, y + 5);
+    doc.text("Qualifies", m + 195, y + 5);
+    doc.text("Comment", m + 215, y + 5);
+    
+    doc.setTextColor(0, 0, 0);
+    y += 8;
+
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+    qual.forEach((c, idx) => {
+      if (y > 190) { doc.addPage(); y = 20; }
+      if (idx % 2 === 0) { doc.setFillColor(245, 245, 245); doc.rect(m, y, pageW - m * 2, 8, "F"); }
+      
+      const pct = ((c.average_score / 30) * 100).toFixed(1) + "%";
+      const qualifies = c.average_score >= minAverage ? "YES" : "NO";
+      
+      doc.text(`${idx + 1}`, m + 3, y + 5);
+      doc.text(c.applicant_name, m + 15, y + 5);
+      doc.text(`${c.class} ${c.stream || ''}`, m + 60, y + 5);
+      doc.text(`${c.smart_score || '-'}`, m + 103, y + 5);
+      doc.text(`${c.conf_score || '-'}`, m + 123, y + 5);
+      doc.text(`${c.qapp_score || '-'}`, m + 143, y + 5);
+      doc.text(`${c.average_score}`, m + 163, y + 5);
+      doc.text(pct, m + 180, y + 5);
+      doc.text(qualifies, m + 195, y + 5);
+      if (c.comment) { doc.text(c.comment.substring(0, 40), m + 215, y + 5); }
+      
+      y += 8;
+    });
+
+    doc.save(`Screening_Report_${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
+    toast.success("Screening Report PDF downloaded!");
   };
 
   return (
@@ -251,17 +455,106 @@ export default function ElectionsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div><Label>Average (%) *</Label><Input type="number" min={0} max={100} value={newAverage} onChange={e => setNewAverage(e.target.value)} /></div>
                 </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div><Label>Smart /10</Label><Input type="number" min={0} max={10} value={newSmart} onChange={e => setNewSmart(e.target.value)} /></div>
+                  <div><Label>Conf /10</Label><Input type="number" min={0} max={10} value={newConf} onChange={e => setNewConf(e.target.value)} /></div>
+                  <div><Label>Q.App /10</Label><Input type="number" min={0} max={10} value={newQapp} onChange={e => setNewQapp(e.target.value)} /></div>
+                </div>
+                <div><Label>Comment</Label><Input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Optional comment" /></div>
                 <Button onClick={handleAddCandidate} className="w-full">Add Candidate</Button>
               </div>
             </DialogContent>
           </Dialog>
+          <Button size="sm" variant="outline" onClick={generateScreeningReportPDF}>
+            <Download className="mr-1 h-4 w-4" /> Report PDF
+          </Button>
           <Button size="sm" variant="outline" onClick={generateBallotPDF}>
             <Download className="mr-1 h-4 w-4" /> Ballot PDF
           </Button>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingId} onOpenChange={(open) => !open && setEditingId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Edit Candidate</DialogTitle></DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div><Label>Full Name *</Label><Input value={editName} onChange={e => setEditName(e.target.value)} /></div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>Class *</Label><Input value={editClass} onChange={e => setEditClass(e.target.value)} /></div>
+              <div><Label>Stream</Label><Input value={editStream} onChange={e => setEditStream(e.target.value)} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>Gender *</Label>
+                <Select value={editGender} onValueChange={setEditGender}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div><Label>Smart /10</Label><Input type="number" min={0} max={10} value={editSmart} onChange={e => setEditSmart(e.target.value)} /></div>
+              <div><Label>Conf /10</Label><Input type="number" min={0} max={10} value={editConf} onChange={e => setEditConf(e.target.value)} /></div>
+              <div><Label>Q.App /10</Label><Input type="number" min={0} max={10} value={editQapp} onChange={e => setEditQapp(e.target.value)} /></div>
+            </div>
+            <div><Label>Comment</Label><Input value={editComment} onChange={e => setEditComment(e.target.value)} /></div>
+            <DialogFooter className="mt-4">
+              <Button onClick={saveEditCandidate} className="w-full">Save Changes</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Filters */}
+      <Card className="bg-muted/30 border-primary/10">
+        <CardContent className="p-3 sm:p-4 grid gap-3 sm:grid-cols-4 items-end">
+          <div className="space-y-1">
+            <Label className="text-xs">Search Name</Label>
+            <Input size={1} placeholder="e.g. John" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Class</Label>
+            <Select value={filterClass} onValueChange={setFilterClass}>
+              <SelectTrigger><SelectValue placeholder="All Classes" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {uniqueClasses.map(c => <SelectItem key={c as string} value={c as string}>{c as string}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Stream</Label>
+            <Select value={filterStream} onValueChange={setFilterStream}>
+              <SelectTrigger><SelectValue placeholder="All Streams" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Streams</SelectItem>
+                {uniqueStreams.map(s => <SelectItem key={s as string} value={s as string}>{s as string}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Gender</Label>
+            <Select value={filterGender} onValueChange={setFilterGender}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genders</SelectItem>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-4 flex justify-between items-center border-t border-primary/10 pt-3 mt-1">
+             <div className="text-sm">
+               {computedAverage !== null && <span>Current Filter Avg: <strong className="text-primary">{computedAverage}/30</strong></span>}
+             </div>
+             <Button size="sm" variant="secondary" onClick={handleComputeAverage}>Compute Filter Average</Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Settings */}
       {showSettings && isTopHead && (
@@ -270,8 +563,8 @@ export default function ElectionsPage() {
             <h3 className="font-semibold text-sm flex items-center gap-2"><Settings2 className="h-4 w-4 text-primary" /> Screening & Access Settings</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label className="text-xs">Min Screening Average (%)</Label>
-                <Input type="number" min={0} max={100} value={minAverage} onChange={e => setMinAverage(Number(e.target.value))} />
+                <Label className="text-xs">Min Screening Total (/30)</Label>
+                <Input type="number" min={0} max={30} value={minAverage} onChange={e => setMinAverage(Number(e.target.value))} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Election Title</Label>
@@ -316,7 +609,7 @@ export default function ElectionsPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card><CardContent className="p-3 text-center">
-          <p className="text-2xl font-bold sm:text-3xl">{applicants.length}</p>
+          <p className="text-2xl font-bold sm:text-3xl">{filteredApplicants.length}</p>
           <p className="text-[10px] sm:text-xs text-muted-foreground">Applicants</p>
         </CardContent></Card>
         <Card><CardContent className="p-3 text-center">
@@ -334,7 +627,7 @@ export default function ElectionsPage() {
         <CardHeader className="pb-2 px-3 sm:px-6">
           <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
             <Vote className="h-4 w-4 text-primary" />
-            Candidates (Min: {minAverage}%)
+            Candidates (Min: {minAverage}/30)
           </CardTitle>
         </CardHeader>
         <CardContent className="px-0 sm:px-6">
@@ -345,38 +638,58 @@ export default function ElectionsPage() {
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground">Name</th>
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground">Class</th>
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden sm:table-cell">Stream</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Gender</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Avg</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden sm:table-cell">Gender</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground" title="Smartness">Smt</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground" title="Confidence">Cnf</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground" title="Quick at Application">Q.A</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground text-primary">Tot /30</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden 2xl:table-cell">Comment</th>
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground">Status</th>
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">Loading…</td></tr>
-                ) : applicants.length === 0 ? (
-                  <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">No candidates yet. Add one above.</td></tr>
-                ) : applicants.map((a) => (
-                  <tr key={a.id} className="border-b last:border-0">
+                  <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">Loading…</td></tr>
+                ) : filteredApplicants.length === 0 ? (
+                  <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">No candidates match filters.</td></tr>
+                ) : filteredApplicants.map((a) => (
+                  <tr key={a.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
                     <td className="py-2 px-2 font-medium">{a.applicant_name}</td>
                     <td className="py-2 px-2 text-muted-foreground">{a.class}</td>
-                    <td className="py-2 px-2 text-muted-foreground hidden sm:table-cell">{(a as any).stream || "—"}</td>
-                    <td className="py-2 px-2 capitalize text-muted-foreground">{a.gender}</td>
+                    <td className="py-2 px-2 text-muted-foreground hidden lg:table-cell">{(a as any).stream || "—"}</td>
+                    <td className="py-2 px-2 capitalize text-muted-foreground hidden sm:table-cell">{a.gender}</td>
+                    <td className="py-2 px-2 text-muted-foreground">{a.smart_score || "—"}</td>
+                    <td className="py-2 px-2 text-muted-foreground">{a.conf_score || "—"}</td>
+                    <td className="py-2 px-2 text-muted-foreground">{a.qapp_score || "—"}</td>
                     <td className="py-2 px-2">
                       <span className={`font-bold ${a.average_score >= minAverage ? "text-primary" : "text-destructive"}`}>
-                        {a.average_score}%
+                        {a.average_score}
                       </span>
+                    </td>
+                    <td className="py-2 px-2 hidden 2xl:table-cell">
+                      {a.comment ? <span className="text-[10px] text-muted-foreground truncate max-w-[150px] block" title={a.comment}>{a.comment}</span> : "—"}
                     </td>
                     <td className="py-2 px-2">
                       <Badge variant={a.status === "qualified" ? "default" : a.status === "disqualified" ? "destructive" : "secondary"} className="text-[10px] sm:text-xs">
                         {a.status}
                       </Badge>
                     </td>
-                    <td className="py-2 px-2">
+                    <td className="py-2 px-2 flex flex-wrap gap-1 min-w-[140px]">
                       {a.status !== "pending" && (
                         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => toggleStatus(a.id, a.status)}>
                           {a.status === "qualified" ? "Disqualify" : "Qualify"}
                         </Button>
+                      )}
+                      {isTopHead && (
+                        <>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Edit" onClick={() => openEditModal(a)}>
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive" title="Delete" onClick={() => handleDeleteCandidate(a.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                     </td>
                   </tr>

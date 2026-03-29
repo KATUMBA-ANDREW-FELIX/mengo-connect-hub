@@ -25,6 +25,24 @@ export default function DocumentsPage() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Other");
   const [file, setFile] = useState<File | null>(null);
+  const [accessLevel, setAccessLevel] = useState("public");
+  const [targetOffice, setTargetOffice] = useState("");
+
+  const OFFICES = [
+    "chairperson", "vice_chairperson", "speaker", "deputy_speaker", 
+    "general_secretary", "assistant_general_secretary", "secretary_finance",
+    "secretary_welfare", "secretary_health", "secretary_women_affairs", 
+    "secretary_publicity", "secretary_pwd", "electoral_commission", "patron"
+  ];
+  
+  const ROLE_LABELS: Record<string, string> = {
+    chairperson: "Chairperson", vice_chairperson: "Vice Chairperson",
+    speaker: "Speaker", deputy_speaker: "Deputy Speaker", general_secretary: "General Secretary",
+    assistant_general_secretary: "Asst. Gen. Secretary", secretary_finance: "Secretary Finance",
+    secretary_welfare: "Secretary Welfare", secretary_health: "Secretary Health",
+    secretary_women_affairs: "Secretary Women Affairs", secretary_publicity: "Secretary Publicity",
+    secretary_pwd: "Secretary PWD", electoral_commission: "Electoral Commission", patron: "Patron"
+  };
 
   const fetchDocs = async () => {
     try {
@@ -48,6 +66,8 @@ export default function DocumentsPage() {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("category", category);
+      formData.append("access_level", accessLevel);
+      if (accessLevel === "shared") formData.append("target_office", targetOffice);
       formData.append("file", file);
 
       await api.post("/documents/", formData, {
@@ -58,6 +78,8 @@ export default function DocumentsPage() {
       setOpen(false); 
       setTitle(""); 
       setCategory("Other"); 
+      setAccessLevel("public");
+      setTargetOffice("");
       setFile(null); 
       fetchDocs();
     } catch (err: any) {
@@ -94,8 +116,28 @@ export default function DocumentsPage() {
                   <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
+              <div><Label>Access Level</Label>
+                <Select value={accessLevel} onValueChange={setAccessLevel}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">Public (All members)</SelectItem>
+                    <SelectItem value="private">Private (My Office Only)</SelectItem>
+                    <SelectItem value="shared">Share with Specific Office</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {accessLevel === "shared" && (
+                <div><Label>Target Office</Label>
+                  <Select value={targetOffice} onValueChange={setTargetOffice}>
+                    <SelectTrigger><SelectValue placeholder="Select Office" /></SelectTrigger>
+                    <SelectContent>
+                      {OFFICES.map(o => <SelectItem key={o} value={o}>{ROLE_LABELS[o]}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div><Label>File</Label><Input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={e => setFile(e.target.files?.[0] || null)} /></div>
-              <Button onClick={handleUpload} disabled={uploading || !file || !title} className="w-full">
+              <Button onClick={handleUpload} disabled={uploading || !file || !title || (accessLevel === 'shared' && !targetOffice)} className="w-full">
                 {uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : "Upload"}
               </Button>
             </div>
@@ -120,7 +162,11 @@ export default function DocumentsPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs sm:text-sm font-medium truncate">{doc.title}</p>
-                  <p className="text-[10px] text-muted-foreground">{doc.uploaded_by} • {new Date(doc.created_at).toLocaleDateString()}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {doc.uploaded_by} • {new Date(doc.created_at).toLocaleDateString()}
+                    {doc.access_level === 'private' && " (Private)"}
+                    {doc.access_level === 'shared' && ` (Shared with ${ROLE_LABELS[doc.target_office] || doc.target_office})`}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">

@@ -36,11 +36,14 @@ const sidebarLinks: NavItem[] = [
   { label: "Logs", path: "/portal/logs", icon: Activity,
     roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
   { label: "Register Member", path: "/portal/register-member", icon: UserPlus,
-    roles: ["patron", "chairperson"] },
+    roles: ["chairperson"] },
+  { label: "Blog Manager", path: "/portal/blog", icon: FileText,
+    roles: ["chairperson", "secretary_publicity"] },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
-  patron: "Patron", chairperson: "Chairperson", vice_chairperson: "Vice Chairperson",
+  adminabsolute: "Admin Absolute", councillor: "Councillor",
+  chairperson: "Chairperson", vice_chairperson: "Vice Chairperson",
   speaker: "Speaker", deputy_speaker: "Deputy Speaker", general_secretary: "General Secretary",
   assistant_general_secretary: "Asst. Gen. Secretary", secretary_finance: "Secretary Finance",
   secretary_welfare: "Secretary Welfare", secretary_health: "Secretary Health",
@@ -79,6 +82,9 @@ export default function PortalLayout() {
   if (!user) return null;
 
   const visibleLinks = sidebarLinks.filter((l) => {
+    if (roles.includes("patron") && !["Dashboard", "Student Voices", "Programmes", "Documents", "Requisitions"].includes(l.label)) {
+      return false;
+    }
     if (!l.roles) return true;
     if (hasAnyRole(l.roles)) return true;
     // EC access delegation
@@ -137,7 +143,7 @@ export default function PortalLayout() {
       <aside className="hidden w-56 flex-col border-r bg-sidebar lg:flex">
         <div className="flex h-12 items-center gap-2 border-b border-sidebar-border px-3">
           <img src={mengoBadge} alt="Crest" className="h-7 w-7 rounded-full object-cover" />
-          <span className="font-serif text-xs font-bold text-sidebar-foreground">Mengo Council</span>
+          <span className="font-serif text-[10px] font-bold text-sidebar-foreground">MENGO STUDENTS' COUNCIL BODY</span>
         </div>
         <NavContent />
       </aside>
@@ -150,7 +156,7 @@ export default function PortalLayout() {
             <div className="flex h-12 items-center justify-between border-b border-sidebar-border px-3">
               <div className="flex items-center gap-2">
                 <img src={mengoBadge} alt="Crest" className="h-7 w-7 rounded-full object-cover" />
-                <span className="font-serif text-xs font-bold text-sidebar-foreground">Mengo Council</span>
+                <span className="font-serif text-[10px] font-bold text-sidebar-foreground">MENGO STUDENTS' COUNCIL BODY</span>
               </div>
               <Button variant="ghost" size="icon" className="text-sidebar-foreground h-8 w-8" onClick={() => setMobileOpen(false)}>
                 <X className="h-4 w-4" />
