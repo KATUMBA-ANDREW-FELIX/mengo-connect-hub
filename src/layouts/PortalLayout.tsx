@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
-  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus,
+  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -57,6 +58,7 @@ export default function PortalLayout() {
   const { user, profile, roles, loading, hasAnyRole, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [ecGranted, setEcGranted] = useState(false);
+  const [activeLocks, setActiveLocks] = useState<any[]>([]);
 
   useEffect(() => {
     if (!loading && !user) navigate("/login", { replace: true });
@@ -70,6 +72,20 @@ export default function PortalLayout() {
       // either the API filters by `granted_to` or we verify locally just in case
       if (grants.some((g: any) => g.granted_to === user.id)) setEcGranted(true);
     }).catch(console.error);
+  }, [user]);
+
+  // Poll for active election locks
+  useEffect(() => {
+    if (!user) return;
+    const fetchLocks = () => {
+      api.get("/election-locks/").then(({ data }) => {
+         const locks = Array.isArray(data) ? data : data.results || [];
+         setActiveLocks(locks);
+      }).catch(console.error);
+    };
+    fetchLocks();
+    const interval = setInterval(fetchLocks, 5000);
+    return () => clearInterval(interval);
   }, [user]);
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
@@ -118,12 +134,17 @@ export default function PortalLayout() {
             key={l.path}
             variant={location.pathname === l.path ? "default" : "ghost"}
             size="sm"
-            className={`w-full justify-start text-sm ${location.pathname !== l.path ? "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" : ""}`}
+            className={`w-full justify-start text-sm relative ${location.pathname !== l.path ? "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" : ""}`}
             asChild
           >
             <Link to={l.path}>
               <l.icon className="mr-2 h-4 w-4" />
-              {l.label}
+              <span className="flex-1 text-left">{l.label}</span>
+              {l.label === "Elections" && activeLocks.length > 0 && (
+                <Badge variant="destructive" className="ml-auto rounded-full px-1.5 py-0 text-[10px]">
+                  <Lock className="h-3 w-3 mr-1" /> {activeLocks.length}
+                </Badge>
+              )}
             </Link>
           </Button>
         ))}
@@ -168,6 +189,17 @@ export default function PortalLayout() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
+        {activeLocks.length > 0 && location.pathname !== "/portal/elections" && (
+          <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-destructive font-medium">
+              <Lock className="h-4 w-4" />
+              <span>Election screening is currently locked.</span>
+            </div>
+            <Button size="sm" variant="link" className="text-destructive h-auto p-0" asChild>
+               <Link to="/portal/elections">View Status &rarr;</Link>
+            </Button>
+          </div>
+        )}
         {/* Top bar */}
         <header className="flex h-12 items-center justify-between border-b bg-background px-3 sm:px-4">
           <div className="flex items-center gap-2">

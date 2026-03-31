@@ -6,13 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil } from "lucide-react";
+import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import jsPDF from "jspdf";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
+
+const generateAutoComment = (smart: number, conf: number, qapp: number, total: number) => {
+  if (total >= 25) return "Exceptionally good";
+  if (total >= 22) return "Quite Good";
+  if (total >= 18) return "Passed";
+  if (total >= 15) return conf < 5 ? "Timid but knowledgeable" : "Not bad";
+  if (total < 15) return "Lacks confidence and quite ignorant";
+  return "Average";
+};
+
 
 interface Applicant {
   id: string;
@@ -71,6 +81,7 @@ export default function ElectionsPage() {
   const [grants, setGrants] = useState<any[]>([]);
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
   const [grantUserId, setGrantUserId] = useState("");
+  const [activeLocks, setActiveLocks] = useState<any[]>([]);
 
   const fetchApplicants = async () => {
     try {
@@ -95,8 +106,16 @@ export default function ElectionsPage() {
     } catch(e) { console.error(e); }
   };
 
+  const fetchLocks = async () => {
+    try {
+      const { data } = await api.get("/election-locks/");
+      setActiveLocks(Array.isArray(data) ? data : data.results || []);
+    } catch(e) { console.error(e); }
+  };
+
   useEffect(() => {
     fetchApplicants();
+    fetchLocks();
     if (isTopHead) { fetchGrants(); fetchProfiles(); }
   }, []);
 
@@ -141,7 +160,7 @@ export default function ElectionsPage() {
         smart_score: Number(newSmart),
         conf_score: Number(newConf),
         qapp_score: Number(newQapp),
-        comment: newComment || null,
+        comment: newComment || generateAutoComment(Number(newSmart), Number(newConf), Number(newQapp), totalScore),
         average_score: totalScore,
         status: "pending",
       });
@@ -184,7 +203,7 @@ export default function ElectionsPage() {
         conf_score: conf,
         qapp_score: qapp,
         average_score,
-        comment: editComment
+        comment: editComment || generateAutoComment(smart, conf, qapp, average_score)
       });
       toast.success("Candidate updated!");
       setEditingId(null);
@@ -261,7 +280,95 @@ export default function ElectionsPage() {
     return electionTitle.toUpperCase();
   };
 
-  const generateBallotPDF = () => {
+  const lockFilter = async () => {
+    try {
+      await api.post("/election-locks/", {
+        filter_class: filterClass,
+        filter_stream: filterStream,
+        threshold: minAverage
+      });
+      toast.success("Screening configuration locked globally!");
+      fetchLocks();
+    } catch (e) {
+      toast.error("Failed to lock filter");
+    }
+  };
+
+  const generateQualifiedPDF = async () => {
+    const qual = filteredApplicants.filter((a) => a.status === "qualified");
+    if (!qual.length) { toast.error("No qualified applicants in current filter"); return; }
+    
+    // Sort by class, stream, then alphabetically
+    const sorted = [...qual].sort((a, b) => {
+      if (a.class !== b.class) return (a.class || "").localeCompare(b.class || "");
+      if (a.stream !== b.stream) return ((a as any).stream || "").localeCompare((b as any).stream || "");
+      return a.applicant_name.localeCompare(b.applicant_name);
+    });
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 15;
+
+    const addImageToDoc = (src: string, x: number, y: number, w: number, h: number, format: string) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.src = src;
+        img.crossOrigin = "Anonymous";
+        img.onload = () => { doc.addImage(img, format, x, y, w, h); resolve(); };
+        img.onerror = () => resolve();
+      });
+    };
+
+    try {
+      await Promise.all([
+        addImageToDoc(mengoBadge, 15, 10, 20, 20, "JPEG"),
+        addImageToDoc(unsaLogoB64, pageW - 35, 10, 20, 20, "PNG")
+      ]);
+    } catch(e) { console.error("Failed to load PDF images:", e); }
+
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
+    y += 6; doc.setFontSize(12);
+    doc.text("VINE STUDENTS' COUNCIL", pageW / 2, y, { align: "center" });
+    y += 6; doc.setFontSize(11);
+    doc.text("QUALIFIED CANDIDATES LIST", pageW / 2, y, { align: "center" });
+    y += 6; doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text(`Election: ${getDynamicTitle()}`, pageW / 2, y, { align: "center" });
+    y += 8;
+
+    const m = 15;
+    doc.setFillColor(41, 128, 185);
+    doc.rect(m, y, pageW - m * 2, 8, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
+    
+    doc.text("No.", m + 3, y + 5);
+    doc.text("Name", m + 20, y + 5);
+    doc.text("Class", m + 90, y + 5);
+    doc.text("Stream", m + 130, y + 5);
+    doc.text("Gender", m + 170, y + 5);
+    
+    doc.setTextColor(0, 0, 0);
+    y += 8;
+
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    sorted.forEach((c, idx) => {
+      if (y > 280) { doc.addPage(); y = 20; }
+      if (idx % 2 === 0) { doc.setFillColor(245, 245, 245); doc.rect(m, y, pageW - m * 2, 8, "F"); }
+      
+      doc.text(`${idx + 1}`, m + 3, y + 5);
+      doc.text(c.applicant_name, m + 20, y + 5);
+      doc.text(c.class || '', m + 90, y + 5);
+      doc.text(c.stream || '', m + 130, y + 5);
+      doc.text(c.gender.charAt(0).toUpperCase() + c.gender.slice(1), m + 170, y + 5);
+      
+      y += 8;
+    });
+
+    doc.save(`Qualified_List_${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
+    toast.success("Qualified List PDF downloaded!");
+  };
+
+  const generateBallotPDF = async () => {
     const qual = filteredApplicants.filter((a) => a.status === "qualified");
     if (!qual.length) { toast.error("No qualified applicants in current filter"); return; }
     const males = qual.filter((a) => a.gender === "male");
@@ -269,67 +376,117 @@ export default function ElectionsPage() {
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
     const m = 15;
-    let y = 15;
+    
+    const ballotsPerPage = 3;
+    const ballotHeight = (pageH - 20) / ballotsPerPage;
 
-    doc.setFont("helvetica", "bold"); doc.setFontSize(20);
-    doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
-    y += 7; doc.setFontSize(10); doc.setFont("helvetica", "normal");
-    doc.text("Kampala, Uganda", pageW / 2, y, { align: "center" });
-    y += 4; doc.setFontSize(9);
-    doc.text('"Akwana Akira Ayomba"', pageW / 2, y, { align: "center" });
-    y += 6;
-    doc.setDrawColor(128, 0, 32); doc.setLineWidth(1);
-    doc.line(m, y, pageW - m, y); y += 8;
-    doc.setFont("helvetica", "bold"); doc.setFontSize(16);
-    doc.text("OFFICIAL BALLOT PAPER", pageW / 2, y, { align: "center" });
-    y += 7; doc.setFontSize(13);
-    doc.text(getDynamicTitle(), pageW / 2, y, { align: "center" });
-    y += 6; doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-    doc.setTextColor(80);
-    doc.text("Instructions: Tick (\u2713) ONE candidate in each category.", pageW / 2, y, { align: "center" });
-    doc.setTextColor(0); y += 10;
-
-    const drawCat = (title: string, cands: Applicant[], startY: number) => {
-      let cy = startY;
-      if (cy > 250) { doc.addPage(); cy = 20; }
-      doc.setFillColor(128, 0, 32);
-      doc.rect(m, cy, pageW - m * 2, 9, "F");
-      doc.setFont("helvetica", "bold"); doc.setFontSize(12);
-      doc.setTextColor(255); doc.text(title, pageW / 2, cy + 6.5, { align: "center" });
-      doc.setTextColor(0); cy += 11;
-      doc.setFillColor(240, 240, 240);
-      doc.rect(m, cy, pageW - m * 2, 7, "F");
-      doc.setFont("helvetica", "bold"); doc.setFontSize(9);
-      doc.text("No.", m + 4, cy + 5); doc.text("Candidate Name", m + 18, cy + 5);
-      doc.text("Class", m + 90, cy + 5); doc.text("Stream", m + 120, cy + 5);
-      doc.text("Tick", pageW - m - 12, cy + 5); cy += 8;
-      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-      cands.forEach((c, idx) => {
-        if (cy > 270) { doc.addPage(); cy = 20; }
-        if (idx % 2 === 0) { doc.setFillColor(250, 250, 250); doc.rect(m, cy, pageW - m * 2, 10, "F"); }
-        doc.setDrawColor(200); doc.setLineWidth(0.3); doc.line(m, cy + 10, pageW - m, cy + 10);
-        doc.setTextColor(0); doc.text(`${idx + 1}.`, m + 4, cy + 7);
-        doc.setFont("helvetica", "bold"); doc.text(c.applicant_name.toUpperCase(), m + 18, cy + 7);
-        doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(100);
-        doc.text(c.class || '', m + 90, cy + 7);
-        doc.text(c.stream || "", m + 120, cy + 7);
-        doc.setTextColor(0); doc.setFontSize(10);
-        doc.setDrawColor(128, 0, 32); doc.setLineWidth(0.5);
-        doc.rect(pageW - m - 14, cy + 2, 7, 7); cy += 10;
+    const addImageToDoc = (src: string, x: number, y: number, w: number, h: number, format: string) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.src = src;
+        img.crossOrigin = "Anonymous";
+        img.onload = () => { doc.addImage(img, format, x, y, w, h); resolve(); };
+        img.onerror = () => resolve();
       });
-      return cy + 6;
     };
 
-    if (females.length) y = drawCat("FEMALE COUNCILLOR", females, y);
-    if (males.length) y = drawCat("MALE COUNCILLOR", males, y);
+    // Calculate maximum rows needed
+    const maxRows = Math.max(males.length, females.length);
+    // Determine how many pages total
+    const totalPages = 1; // Note: if the list is long, we'd need multiple pages, but typically a ballot generation for a class fits. Let's assume standard usage.
+    
+    let currentBallot = 0;
+    
+    for (let currentBallot = 0; currentBallot < ballotsPerPage; currentBallot++) {
+      const topY = 10 + (currentBallot * ballotHeight);
+      let y = topY;
+      
+      if (currentBallot > 0) {
+        // Draw dashed line
+        doc.setLineDashPattern([3, 3], 0);
+        doc.setDrawColor(150);
+        doc.line(10, topY - 3, pageW - 10, topY - 3);
+        doc.setLineDashPattern([], 0);
+      }
 
-    y += 4; doc.setDrawColor(128, 0, 32); doc.setLineWidth(0.5);
-    doc.line(m, y, pageW - m, y); y += 6;
-    doc.setFontSize(8); doc.setTextColor(100);
-    doc.text("Electoral Commission — Mengo Senior School Student Council", pageW / 2, y, { align: "center" });
-    y += 4;
-    doc.text(`Generated on ${new Date().toLocaleDateString("en-UG", { day: "numeric", month: "long", year: "numeric" })}`, pageW / 2, y, { align: "center" });
+      await Promise.all([
+        addImageToDoc(mengoBadge, 15, y, 16, 16, "JPEG"),
+        addImageToDoc(unsaLogoB64, pageW - 28, y, 16, 16, "PNG")
+      ]);
+
+      y += 4;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+      doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
+      y += 5; doc.setFontSize(11);
+      doc.text("THE VINE STUDENTS' COUNCIL", pageW / 2, y, { align: "center" });
+      y += 5; doc.setFontSize(11);
+      doc.text("VINE STUDENTS' COUNCIL ELECTIONS", pageW / 2, y, { align: "center" });
+      y += 5;
+      doc.setFontSize(9);
+      if (filterClass !== "all") {
+        doc.text(`${filterClass} ${filterStream !== "all" ? filterStream : ""}`.trim().toUpperCase(), pageW / 2, y, { align: "center" });
+      }
+      y += 5;
+      
+      // Dual column table
+      const midX = pageW / 2;
+      doc.setFontSize(10);
+      doc.text("MALES", m + (midX - m) / 2, y, { align: "center" });
+      doc.text("FEMALES", midX + (pageW - m - midX) / 2, y, { align: "center" });
+      y += 2;
+      
+      const startTableY = y;
+      
+      // Headers
+      doc.setFillColor(230, 230, 230);
+      doc.rect(m, y, midX - m, 6, "F");
+      doc.rect(midX, y, pageW - m - midX, 6, "F");
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.rect(m, y, midX - m, 6);
+      doc.rect(midX, y, pageW - m - midX, 6);
+      
+      doc.setFontSize(8);
+      doc.text("VOTE FOR ONLY ONE CANDIDATE", m + (midX - m) / 2, y + 4, { align: "center" });
+      doc.text("VOTE FOR ONLY ONE CANDIDATE", midX + (pageW - m - midX) / 2, y + 4, { align: "center" });
+      y += 6;
+      
+      const tickBoxW = 10;
+      
+      for (let i = 0; i < maxRows; i++) {
+        // Row height 6
+        const rowH = 6;
+        const male = males[i];
+        const female = females[i];
+        
+        // Male box
+        doc.setLineWidth(0.3);
+        doc.rect(m, y, midX - m - tickBoxW, rowH); // text box
+        doc.rect(midX - tickBoxW, y, tickBoxW, rowH); // tick box
+        if (male) {
+           doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+           doc.text(`${i + 1}.`, m + 2, y + 4);
+           doc.text(male.applicant_name.toUpperCase(), m + 8, y + 4);
+        }
+        
+        // Female box
+        doc.rect(midX, y, pageW - m - midX - tickBoxW, rowH); // text box
+        doc.rect(pageW - m - tickBoxW, y, tickBoxW, rowH); // tick box
+        if (female) {
+           doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+           doc.text(`${i + 1}.`, midX + 2, y + 4);
+           doc.text(female.applicant_name.toUpperCase(), midX + 8, y + 4);
+        }
+        y += rowH;
+      }
+      
+      // Space for extra candidate row or write in
+      doc.rect(m, y, pageW - m * 2, 12);
+      
+    }
+
     doc.save(`Ballot_${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
     toast.success("Ballot PDF downloaded!");
   };
@@ -367,7 +524,7 @@ export default function ElectionsPage() {
     doc.setFont("helvetica", "bold"); doc.setFontSize(14);
     doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
     y += 6; doc.setFontSize(12);
-    doc.text(getDynamicTitle(), pageW / 2, y, { align: "center" });
+    doc.text("VINE STUDENTS' COUNCIL", pageW / 2, y, { align: "center" });
     y += 6; doc.setFontSize(11);
     doc.text("SCREENING EVALUATION TOOL", pageW / 2, y, { align: "center" });
     y += 6; doc.setFont("helvetica", "normal"); doc.setFontSize(9);
@@ -429,9 +586,14 @@ export default function ElectionsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {isTopHead && (
-            <Button variant="outline" size="sm" onClick={() => setShowSettings(!showSettings)}>
-              <Settings2 className="mr-1 h-4 w-4" /> Settings
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={lockFilter} disabled={activeLocks.length > 0} className={activeLocks.length > 0 ? "opacity-50" : ""}>
+                <Lock className="mr-1 h-4 w-4" /> {activeLocks.length > 0 ? "Locked" : "Lock Filter"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowSettings(!showSettings)}>
+                <Settings2 className="mr-1 h-4 w-4" /> Settings
+              </Button>
+            </>
           )}
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
@@ -468,6 +630,9 @@ export default function ElectionsPage() {
           </Dialog>
           <Button size="sm" variant="outline" onClick={generateScreeningReportPDF}>
             <Download className="mr-1 h-4 w-4" /> Report PDF
+          </Button>
+          <Button size="sm" variant="outline" onClick={generateQualifiedPDF}>
+            <Download className="mr-1 h-4 w-4" /> Qualified List
           </Button>
           <Button size="sm" variant="outline" onClick={generateBallotPDF}>
             <Download className="mr-1 h-4 w-4" /> Ballot PDF

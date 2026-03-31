@@ -210,6 +210,22 @@ export function setupMockApi(api: AxiosInstance) {
 
   // Mock EC Grants
   mock.onGet('/ec-access-grants/').reply(200, { results: [] });
+
+  let MOCK_ELECTION_LOCKS: any[] = [];
+
+  mock.onGet('/election-locks/').reply(200, { results: MOCK_ELECTION_LOCKS });
+  mock.onPost('/election-locks/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newLock = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
+    MOCK_ELECTION_LOCKS.push(newLock);
+    return [201, newLock];
+  });
+  mock.onDelete(/\/election-locks\/\d+\//).reply((config) => {
+    const id = config.url?.split('/')[2];
+    MOCK_ELECTION_LOCKS = MOCK_ELECTION_LOCKS.filter(l => l.id !== id);
+    return [204, {}];
+  });
+
   mock.onGet('/users/all-profiles/').reply(200, { results: Object.values(USERS).map(u => u.profile) });
 
   mock.onPost('/users/upgrade-role/').reply((config) => {
