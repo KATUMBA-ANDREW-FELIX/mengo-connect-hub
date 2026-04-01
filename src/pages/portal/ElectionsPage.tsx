@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil, Lock } from "lucide-react";
+import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil, Lock, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import jsPDF from "jspdf";
+import * as XLSX from "xlsx";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
 
@@ -48,6 +49,12 @@ export default function ElectionsPage() {
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+
+  // Excel Upload
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadClass, setUploadClass] = useState("");
+  const [uploadStream, setUploadStream] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   // Add candidate form
   const [newName, setNewName] = useState("");
@@ -172,6 +179,82 @@ export default function ElectionsPage() {
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Failed to add candidate");
     }
+  };
+
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!uploadClass) {
+      toast.error("Please specify a target class before selecting a file.");
+      e.target.value = "";
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        if (data.length === 0) {
+          toast.error("No valid data found in Excel sheet");
+          return;
+        }
+
+        let success = 0;
+        let fails = 0;
+
+        for (const row of data as any[]) {
+          const name = row["Name"] || row["Applicant Name"] || row["student name"] || row["name"] || row["applicant"];
+          if (!name) continue;
+          
+          // Parse gender
+          let gender = "male";
+          const g = (row["Gender"] || row["gender"])?.toString().toLowerCase();
+          if (g && (g.startsWith("f") || g === "female")) gender = "female";
+          
+          // Parse numbers
+          const parseNum = (val: any) => (!isNaN(Number(val)) ? Number(val) : 0);
+          const smart = parseNum(row["Smart"] || row["Smart /10"] || row["smart"]);
+          const conf = parseNum(row["Conf"] || row["Conf /10"] || row["conf"]);
+          const qapp = parseNum(row["Q.App"] || row["Q.App /10"] || row["qapp"]);
+          const total = smart + conf + qapp;
+
+          try {
+            await api.post("/applications/", {
+              applicant_name: name,
+              applicant_class: uploadClass,
+              stream: uploadStream || null,
+              gender,
+              smart_score: smart,
+              conf_score: conf,
+              qapp_score: qapp,
+              average_score: total,
+              comment: generateAutoComment(smart, conf, qapp, total),
+              status: "pending",
+            });
+            success++;
+          } catch (err) {
+            fails++;
+          }
+        }
+        
+        toast.success(`Excel upload complete. Imported ${success} candidates. (Failures: ${fails})`);
+        setUploadOpen(false);
+        setUploadClass(""); setUploadStream(""); 
+        fetchApplicants();
+      } catch (err) {
+        toast.error("Failed to parse Excel file");
+      } finally {
+        setIsUploading(false);
+        e.target.value = "";
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   const openEditModal = (a: any) => {
@@ -628,6 +711,36 @@ export default function ElectionsPage() {
               </div>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline"><Upload className="mr-1 h-4 w-4" /> Upload Excel</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm">
+              <DialogHeader><DialogTitle>Bulk Upload Candidates</DialogTitle></DialogHeader>
+              <div className="space-y-3 pt-2">
+                <p className="text-xs text-muted-foreground">
+                  Select the Class and Stream first, then choose an Excel file (.xlsx). Extract uses columns: "Name", "Gender", "Smart", "Conf", "Q.App".
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div><Label>Class *</Label><Input value={uploadClass} onChange={e => setUploadClass(e.target.value)} placeholder="e.g. S.2" /></div>
+                  <div><Label>Stream</Label><Input value={uploadStream} onChange={e => setUploadStream(e.target.value)} placeholder="e.g. North" /></div>
+                </div>
+                <div>
+                  <Label>Excel File</Label>
+                  <Input 
+                    type="file" 
+                    accept=".xlsx, .xls, .csv" 
+                    onChange={handleExcelUpload} 
+                    disabled={isUploading}
+                    className="cursor-pointer"
+                  />
+                </div>
+                {isUploading && <p className="text-xs text-primary animate-pulse">Processing file and uploading candidates...</p>}
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button size="sm" variant="outline" onClick={generateScreeningReportPDF}>
             <Download className="mr-1 h-4 w-4" /> Report PDF
           </Button>
