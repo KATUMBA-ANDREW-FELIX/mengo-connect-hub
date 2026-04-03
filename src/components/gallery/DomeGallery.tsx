@@ -77,14 +77,14 @@ export const DomeGallery: React.FC<DomeGalleryProps> = ({ images }) => {
               <motion.div
                 key={img.id}
                 className="absolute left-1/2 top-1/2 -ml-16 -mt-24 h-48 w-32 overflow-hidden rounded-2xl border-2 border-white/20 bg-muted shadow-2xl transition-all duration-500 hover:scale-110 hover:border-gold hover:grayscale-0 grayscale"
+                animate={{
+                  rotateY: angle,
+                  z: radius,
+                }}
                 style={{
-                  transform: `rotateY(var(--rotate-y)) translateZ(var(--translate-z))`,
-                  // @ts-ignore
-                  '--rotate-y': `${angle}deg`,
-                  '--translate-z': `${radius}px`,
                   backfaceVisibility: 'hidden',
                 }}
-                whileHover={{ y: -10 }}
+                whileHover={{ y: -10, scale: 1.1 }}
                 onClick={(e) => {
                   e.stopPropagation();
                   // Enlarge implementation would go here (Dialog/Modal)

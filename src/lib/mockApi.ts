@@ -1,5 +1,6 @@
 import MockAdapter from 'axios-mock-adapter';
 import { AxiosInstance } from 'axios';
+import { DEFAULT_TREE } from '../hooks/useHierarchy';
 
 // Mock DB
 const USERS: Record<string, any> = {
@@ -56,6 +57,8 @@ let MOCK_STREAMS = [
   { id: '1', name: 'EAST' },
   { id: '2', name: 'WEST' },
 ];
+
+let MOCK_TREE = [...DEFAULT_TREE];
 
 export function setupMockApi(api: AxiosInstance) {
   const mock = new MockAdapter(api, { delayResponse: 500 });
@@ -453,5 +456,19 @@ export function setupMockApi(api: AxiosInstance) {
      return [204, {}];
    });
  
+   mock.onGet('/hierarchy-tree/').reply(200, { results: MOCK_TREE });
+   mock.onPut('/hierarchy-tree/').reply((config) => {
+     try {
+       const newTree = JSON.parse(config.data);
+       if (Array.isArray(newTree)) {
+         MOCK_TREE = newTree;
+         return [200, { results: MOCK_TREE, message: "Tree updated successfully" }];
+       }
+       return [400, { detail: "Invalid tree structure" }];
+     } catch (e) {
+       return [400, { detail: "Invalid JSON" }];
+     }
+   });
+
    mock.onAny().passThrough();
 }

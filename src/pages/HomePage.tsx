@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageSquare } from "lucide-react";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { WhoWeAre, CabinetGrid } from "@/components/CabinetSection";
+import { TimelineSection } from "@/components/home/TimelineSection";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
@@ -58,6 +59,7 @@ export default function HomePage() {
       <QuoteOfTheDaySection />
       <WhoWeAre />
       <CabinetGrid />
+      <TimelineSection />
 
       {/* CTA — compact */}
       <section className="bg-hero-gradient py-12 sm:py-16">

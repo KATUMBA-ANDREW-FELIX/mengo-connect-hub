@@ -3,11 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Users, UserPlus, Loader2, RefreshCcw } from "lucide-react";
-import HierarchyTree, { TREE } from "@/components/portal/HierarchyTree";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Users, UserPlus, Loader2, RefreshCcw, LayoutTemplate } from "lucide-react";
+import HierarchyTree from "@/components/portal/HierarchyTree";
+import StructureEditor from "@/components/portal/StructureEditor";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { useHierarchy } from "@/hooks/useHierarchy";
 
 export default function HierarchyPage() {
   const { profile, roles } = useAuth();
@@ -20,6 +23,9 @@ export default function HierarchyPage() {
   const [selectedRole, setSelectedRole] = useState("");
 
   const isAdminOrCP = roles?.some(r => ["adminabsolute", "chairperson"].includes(r));
+  const isAbsoluteAdmin = roles?.includes("adminabsolute");
+
+  const { tree, loading: loadingTree } = useHierarchy(refreshKey);
 
   useEffect(() => {
     if (isAdminOrCP) {
@@ -63,68 +69,89 @@ export default function HierarchyPage() {
         </Button>
       </div>
 
-      {isAdminOrCP && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider">
-              <UserPlus className="h-4 w-4" /> Manage Cabinet Positions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-              <div className="space-y-2">
-                <Label className="text-[11px] uppercase font-bold text-muted-foreground">1. Select Member</Label>
-                <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Select a councillor..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {councillors.map(c => (
-                      <SelectItem key={c.user_id} value={c.user_id}>{c.full_name} ({c.student_class})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      <Tabs defaultValue="view" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="view" className="flex items-center gap-2">
+            <Users className="w-4 h-4" /> Structure & Assignments
+          </TabsTrigger>
+          {isAbsoluteAdmin && (
+            <TabsTrigger value="edit" className="flex items-center gap-2">
+              <LayoutTemplate className="w-4 h-4" /> Edit Layout Structure
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-              <div className="space-y-2">
-                <Label className="text-[11px] uppercase font-bold text-muted-foreground">2. Assign Position</Label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Select position..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TREE.map(node => (
-                      <SelectItem key={node.role} value={node.role}>{node.label}</SelectItem>
-                    ))}
-                    <SelectItem value="councillor">Strip to Mere Councillor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <TabsContent value="view" className="space-y-6">
+          {isAdminOrCP && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider">
+                  <UserPlus className="h-4 w-4" /> Manage Cabinet Positions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div className="space-y-2">
+                    <Label className="text-[11px] uppercase font-bold text-muted-foreground">1. Select Member</Label>
+                    <Select value={selectedUser} onValueChange={setSelectedUser}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Select a councillor..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {councillors.map(c => (
+                          <SelectItem key={c.user_id} value={c.user_id}>{c.full_name} ({c.student_class})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <Button 
-                onClick={handleAssign} 
-                disabled={updating || !selectedUser || !selectedRole}
-                className="w-full"
-              >
-                {updating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />} 
-                Confirm Assignment
-              </Button>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-3 italic">
-              Note: Assigning a leadership position will automatically update their permissions and the public hierarchy tree.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+                  <div className="space-y-2">
+                    <Label className="text-[11px] uppercase font-bold text-muted-foreground">2. Assign Position</Label>
+                    <Select value={selectedRole} onValueChange={setSelectedRole} disabled={loadingTree}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder={loadingTree ? "Loading roles..." : "Select position..."} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tree.map(node => (
+                          <SelectItem key={node.role} value={node.role}>{node.label}</SelectItem>
+                        ))}
+                        <SelectItem value="councillor">Strip to Mere Councillor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-      <Card>
-        <CardHeader className="pb-2 px-3 sm:px-6 border-b mb-4">
-          <CardTitle className="text-sm font-semibold">Council Structure & Current Officers</CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 sm:px-6">
-          <HierarchyTree refreshKey={refreshKey} />
-        </CardContent>
-      </Card>
+                  <Button 
+                    onClick={handleAssign} 
+                    disabled={updating || !selectedUser || !selectedRole}
+                    className="w-full"
+                  >
+                    {updating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />} 
+                    Confirm Assignment
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-3 italic">
+                  Note: Assigning a leadership position will automatically update their permissions and the public hierarchy tree.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader className="pb-2 px-3 sm:px-6 border-b mb-4">
+              <CardTitle className="text-sm font-semibold">Council Structure & Current Officers</CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-6">
+              <HierarchyTree refreshKey={refreshKey} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {isAbsoluteAdmin && (
+          <TabsContent value="edit" className="m-0 border-none p-0 outline-none">
+            <StructureEditor onTreeUpdated={() => setRefreshKey(prev => prev + 1)} />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
