@@ -25,6 +25,7 @@ import RegisterMemberPage from "@/pages/portal/RegisterMemberPage";
 import RegisterPatronPage from "./pages/portal/RegisterPatronPage";
 import BlogManagerPage from "@/pages/portal/BlogManagerPage";
 import DisciplinaryPage from "@/pages/portal/DisciplinaryPage";
+import ActionPlanPage from "@/pages/portal/ActionPlanPage";
 import SettingsPage from "@/pages/portal/SettingsPage";
 import NotFound from "./pages/NotFound.tsx";
 const queryClient = new QueryClient();
@@ -90,6 +91,11 @@ const App = () => (
               <Route element={<RoleGuard allowedRoles={["patron", "chairperson"]} />}>
                 <Route path="register-member" element={<RegisterMemberPage />} />
                 <Route path="register-patron" element={<RegisterPatronPage />} />
+              </Route>
+
+              {/* Action Plan – leadership only */}
+              <Route element={<RoleGuard allowedRoles={["adminabsolute", "patron", "chairperson", "vice_chairperson", "general_secretary", "assistant_general_secretary"]} />}>
+                <Route path="action-plan" element={<ActionPlanPage />} />
               </Route>
             </Route>
 

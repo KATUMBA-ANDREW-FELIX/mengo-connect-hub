@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
-  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings, Scale, Shield, ShieldCheck
+  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings, Scale, Shield, ShieldCheck,
+  Target
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,8 @@ const sidebarLinks: NavItem[] = [
     roles: ["chairperson", "secretary_publicity", "general_secretary", "adminabsolute"] },
   { label: "Disciplinary Actions", path: "/portal/disciplinary", icon: Scale,
     roles: ["disciplinary_committee", "chairperson", "vice_chairperson", "general_secretary"] },
+  { label: "Strategic Action Plan", path: "/portal/action-plan", icon: Target,
+    roles: ["chairperson", "vice_chairperson", "general_secretary", "assistant_general_secretary", "adminabsolute", "patron"] },
 ];
 
 const ROLE_LABELS: Record<string, string> = {

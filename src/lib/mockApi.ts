@@ -3,6 +3,44 @@ import { AxiosInstance } from 'axios';
 import { DEFAULT_TREE } from '../hooks/useHierarchy';
 
 // Mock DB
+let MOCK_ACTION_PLANS: any[] = [
+  {
+    id: '1',
+    title: 'Digitalize Council Records',
+    objective: 'Move all manual paper-based council records to the digital hub for transparency.',
+    category: 'Digital',
+    steps: [
+      { id: '1-1', text: 'Finalize portal infrastructure', status: 'completed' },
+      { id: '1-2', text: 'Upload past minutes (2025)', status: 'pending' },
+      { id: '1-3', text: 'Train all secretaries on usage', status: 'pending' }
+    ],
+    start_date: new Date().toISOString(),
+    target_date: new Date(Date.now() + 86400000 * 30).toISOString(),
+    responsible_role: 'general_secretary',
+    status: 'in_progress',
+    progress: 33,
+    created_by: 'usr_admin',
+    created_at: new Date().toISOString()
+  },
+  {
+    id: '2',
+    title: 'Sanitation Campaign 2026',
+    objective: 'Increase awareness and facilities for school-wide cleanliness.',
+    category: 'Welfare',
+    steps: [
+      { id: '2-1', text: 'Procure new waste bins', status: 'pending' },
+      { id: '2-2', text: 'Launch awareness posters', status: 'completed' }
+    ],
+    start_date: new Date().toISOString(),
+    target_date: new Date(Date.now() + 86400000 * 15).toISOString(),
+    responsible_role: 'secretary_welfare',
+    status: 'pending',
+    progress: 50,
+    created_by: 'usr_admin',
+    created_at: new Date().toISOString()
+  }
+];
+
 const USERS: Record<string, any> = {
   'adminabsolute': {
     password: 'absolute2026!',
@@ -110,7 +148,7 @@ const USERS: Record<string, any> = {
 
 let MOCK_APPLICANTS = [
   { id: '1', applicant_name: 'Jane Doe', class: 'S.2', stream: 'North', smart_score: 9, conf_score: 8, qapp_score: 8, average_score: 25, comment: 'Great prospect', gender: 'female', status: 'qualified' },
-  { id: '2', applicant_name: 'John Smith', class: 'S.2', stream: 'South', smart_score: 4, conf_score: 5, qapp_score: 3, average_score: 12, comment: 'Needs confidence', gender: 'male', status: 'disqualified' },
+  { id: '2', applicant_name: 'John Smith', class: 'S.2', stream: 'South', smart_score: 4, font_score: 5, qapp_score: 3, average_score: 12, comment: 'Needs confidence', gender: 'male', status: 'disqualified' },
 ];
 
 let MOCK_STREAMS = [
@@ -261,12 +299,12 @@ export function setupMockApi(api: AxiosInstance) {
      { id: '12', url: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80', caption: 'Peer Mentorship Program - Student Outreach', created_at: new Date().toISOString() }
    ];
  
-   let MOCK_STUDENT_VOICES: any[] = [
-     { id: '1', title: 'Better Cafeteria Menu', category: 'ideas', description: 'The menu is currently repetitive. Requesting more variety in fruits and snacks for students.', status: 'Pending', submitted_by: 'Musa John', submitted_class: 'S.3', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false },
-     { id: '2', title: 'Broken Lab Equipment', category: 'complaints', description: 'Form 4 lab is lacking working microscopes. This makes practical sessions difficult.', status: 'Pending', submitted_by: 'Sarah Faith', submitted_class: 'S.4', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: true },
-     { id: '3', title: 'aaaaaaaaaaaaaaa', category: 'ideas', description: 'sdsdsdsdsdsdsdsdsdsd sdsdsdsdsdsdsdsdsd', status: 'Pending', submitted_by: 'Anonymous', submitted_class: 'S.2', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false },
-     { id: '4', title: 'URGENT: Stolen Phone', category: 'complaints', description: 'Someone stole my phone in the locker room. This is unfair and I want a strike if it is not found!', status: 'Pending', submitted_by: 'Kato Paul', submitted_class: 'S.5', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false }
-   ];
+    let MOCK_STUDENT_VOICES: any[] = [
+      { id: '1', title: 'Better Cafeteria Menu', category: 'ideas', description: 'The menu is currently repetitive. Requesting more variety in fruits and snacks for students.', status: 'Pending', submitted_by: 'Musa John', submitted_class: 'S.3', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false },
+      { id: '2', title: 'Broken Lab Equipment', category: 'complaints', description: 'Form 4 lab is lacking working microscopes. This makes practical sessions difficult.', status: 'Pending', submitted_by: 'Sarah Faith', submitted_class: 'S.4', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: true },
+      { id: '3', title: 'aaaaaaaaaaaaaaa', category: 'ideas', description: 'sdsdsdsdsdsdsdsdsdsd sdsdsdsdsdsdsdsdsd', status: 'Pending', submitted_by: 'Anonymous', submitted_class: 'S.2', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false },
+      { id: '4', title: 'URGENT: Stolen Phone', category: 'complaints', description: 'Someone stole my phone in the locker room. This is unfair and I want a strike if it is not found!', status: 'Pending', submitted_by: 'Kato Paul', submitted_class: 'S.5', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false }
+    ];
 
   const getFilteredVoices = (config: any) => {
     const isPatronMock = config.headers?.["Authorization"]?.includes("patron_token") || false;
@@ -544,20 +582,44 @@ export function setupMockApi(api: AxiosInstance) {
      MOCK_ROTAS = MOCK_ROTAS.filter(r => r.id !== id);
      return [204, {}];
    });
- 
-   mock.onGet('/hierarchy-tree/').reply(200, { results: MOCK_TREE });
-   mock.onPut('/hierarchy-tree/').reply((config) => {
-     try {
-       const newTree = JSON.parse(config.data);
-       if (Array.isArray(newTree)) {
-         MOCK_TREE = newTree;
-         return [200, { results: MOCK_TREE, message: "Tree updated successfully" }];
-       }
-       return [400, { detail: "Invalid tree structure" }];
-     } catch (e) {
-       return [400, { detail: "Invalid JSON" }];
-     }
-   });
 
-   mock.onAny().passThrough();
+    // Action Plan Endpoints
+    mock.onGet('/action-plans/').reply(200, { results: MOCK_ACTION_PLANS });
+    mock.onPost('/action-plans/').reply((config) => {
+      const data = JSON.parse(config.data);
+      const newPlan = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
+      MOCK_ACTION_PLANS.unshift(newPlan);
+      return [201, newPlan];
+    });
+    mock.onPatch(/\/action-plans\/\d+\//).reply((config) => {
+       const id = config.url?.split('/')[2];
+       const data = JSON.parse(config.data);
+       const index = MOCK_ACTION_PLANS.findIndex((p: any) => p.id === id);
+       if (index !== -1) {
+         MOCK_ACTION_PLANS[index] = { ...MOCK_ACTION_PLANS[index], ...data };
+         return [200, MOCK_ACTION_PLANS[index]];
+       }
+       return [404, { detail: 'Plan not found' }];
+    });
+    mock.onDelete(/\/action-plans\/\d+\//).reply((config) => {
+       const id = config.url?.split('/')[2];
+       MOCK_ACTION_PLANS = MOCK_ACTION_PLANS.filter((p: any) => p.id !== id);
+       return [204, {}];
+    });
+  
+    mock.onGet('/hierarchy-tree/').reply(200, { results: MOCK_TREE });
+    mock.onPut('/hierarchy-tree/').reply((config) => {
+      try {
+        const newTree = JSON.parse(config.data);
+        if (Array.isArray(newTree)) {
+          MOCK_TREE = newTree;
+          return [200, { results: MOCK_TREE, message: "Tree updated successfully" }];
+        }
+        return [400, { detail: "Invalid tree structure" }];
+      } catch (e) {
+        return [400, { detail: "Invalid JSON" }];
+      }
+    });
+
+    mock.onAny().passThrough();
 }
