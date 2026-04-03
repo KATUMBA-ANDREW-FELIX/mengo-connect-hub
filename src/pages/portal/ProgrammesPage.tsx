@@ -13,7 +13,7 @@ import { useActivityLog } from "@/hooks/useActivityLog";
 import { notifyAllCouncillors } from "@/hooks/useNotify";
 import { InteractiveCalendar } from "@/components/calendar/InteractiveCalendar";
 import { Calendar, momentLocalizer } from "react-big-calendar";
-import { LayoutGrid, CalendarDays } from "lucide-react";
+import { LayoutGrid, CalendarDays, LayoutList, Clock } from "lucide-react";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
@@ -25,6 +25,7 @@ interface Programme {
   description: string | null;
   event_date: string | null;
   visibility: 'public' | 'private';
+  is_big_event?: boolean;
   created_by: string;
   created_at: string;
 }
@@ -39,8 +40,9 @@ export default function ProgrammesPage() {
   const [description, setDescription] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
-   const [visibility, setVisibility] = useState<"public" | "private">("public");
-   const [viewMode, setViewMode] = useState<"calendar" | "visual">("calendar");
+  const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [viewMode, setViewMode] = useState<"calendar" | "visual" | "timeline">("timeline");
+  const [isBigEvent, setIsBigEvent] = useState(false);
 
   const canAdd = hasAnyRole(["general_secretary", "secretary_publicity", "adminabsolute", "chairperson"]);
 
@@ -71,6 +73,7 @@ export default function ProgrammesPage() {
         description: description.trim() || null,
         event_date: eventDate || null,
         visibility: visibility,
+        is_big_event: isBigEvent,
         created_by: user.id,
       });
       toast.success("Programme added"); 
@@ -78,6 +81,7 @@ export default function ProgrammesPage() {
       notifyAllCouncillors("New Programme", `"${title}" was added as ${visibility} event`, "info");
       setTitle(""); setDescription(""); setEventDate("");
       setVisibility("public");
+      setIsBigEvent(false);
       setOpen(false);
       fetchProgrammes();
     } catch (e: any) {
@@ -117,6 +121,12 @@ export default function ProgrammesPage() {
                     <label className="flex items-center gap-1.5"><input type="radio" name="visibility" value="private" checked={visibility === "private"} onChange={() => setVisibility("private")} /> Councilor Private</label>
                   </div>
                 </div>
+                <div>
+                  <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                    <input type="checkbox" checked={isBigEvent} onChange={(e) => setIsBigEvent(e.target.checked)} className="rounded border-gray-300 w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium">Mark as Major Event (Show on Timeline)</span>
+                  </label>
+                </div>
                 <Button onClick={handleAdd} disabled={submitting} className="w-full">{submitting ? "Saving..." : "Add Programme"}</Button>
               </div>
             </DialogContent>
@@ -124,7 +134,15 @@ export default function ProgrammesPage() {
         )}
       </div>
 
-      <div className="flex justify-end gap-2 px-1">
+      <div className="flex flex-wrap justify-end gap-2 px-1">
+        <Button 
+          variant={viewMode === "timeline" ? "default" : "outline"} 
+          size="sm" 
+          onClick={() => setViewMode("timeline")}
+          className="rounded-full px-4 h-8 text-[11px] font-bold uppercase tracking-wider"
+        >
+          <LayoutList className="w-3.5 h-3.5 mr-1.5" /> Timeline View
+        </Button>
         <Button 
           variant={viewMode === "calendar" ? "default" : "outline"} 
           size="sm" 
@@ -148,8 +166,33 @@ export default function ProgrammesPage() {
       ) : programmes.length === 0 ? (
         <p className="text-center py-8 text-muted-foreground">No programmes yet.</p>
       ) : (
-        <Card className="p-2 sm:p-4 shadow-sm border-none bg-transparent sm:bg-card sm:border">
-          {viewMode === "calendar" ? (
+        <Card className={`p-2 sm:p-4 shadow-sm ${viewMode === 'timeline' ? 'bg-transparent border-none' : 'border-none bg-transparent sm:bg-card sm:border'}`}>
+          {viewMode === "timeline" ? (
+             <div className="py-6 px-2 sm:px-8 max-w-4xl mx-auto">
+               <h2 className="text-2xl font-serif font-bold mb-8 text-center">Council Timeline (Major Events)</h2>
+               <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
+                 {programmes.filter(p => p.is_big_event).sort((a, b) => new Date(a.event_date || a.created_at).getTime() - new Date(b.event_date || b.created_at).getTime()).map((p, i) => (
+                   <div key={p.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                     <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-primary text-primary-foreground shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                       <Clock className="w-4 h-4" />
+                     </div>
+                     <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition">
+                       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-1 gap-1">
+                         <h3 className="font-bold text-lg leading-tight">{p.title}</h3>
+                         <span className="text-[10px] sm:text-xs font-semibold px-2.5 py-0.5 bg-primary/10 text-primary rounded-full shrink-0 w-fit">
+                           {formatDate(p.event_date)}
+                         </span>
+                       </div>
+                       {p.description && <p className="text-muted-foreground text-sm">{p.description}</p>}
+                     </div>
+                   </div>
+                 ))}
+                 {programmes.filter(p => p.is_big_event).length === 0 && (
+                   <div className="text-center text-muted-foreground py-12 relative z-10 bg-background/80">No major events added to the timeline yet.</div>
+                 )}
+               </div>
+             </div>
+          ) : viewMode === "calendar" ? (
             <div className="h-[600px] w-full">
               <Calendar
                 localizer={localizer}

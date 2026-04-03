@@ -176,8 +176,8 @@ export function setupMockApi(api: AxiosInstance) {
   ];
 
   let MOCK_PROGRAMMES: any[] = [
-    { id: '1', title: 'Opening Ceremony', description: 'Termly opening assembly for all students.', event_date: new Date().toISOString(), visibility: 'public', created_by: 'adminabsolute', created_at: new Date().toISOString() },
-    { id: '2', title: 'Council Strategy Meeting', description: 'Private meeting for incoming strategies.', event_date: new Date(Date.now() + 86400000 * 2).toISOString(), visibility: 'private', created_by: 'chairperson', created_at: new Date().toISOString() }
+    { id: '1', title: 'Opening Ceremony', description: 'Termly opening assembly for all students.', event_date: new Date().toISOString(), visibility: 'public', is_big_event: true, created_by: 'adminabsolute', created_at: new Date().toISOString() },
+    { id: '2', title: 'Council Strategy Meeting', description: 'Private meeting for incoming strategies.', event_date: new Date(Date.now() + 86400000 * 2).toISOString(), visibility: 'private', is_big_event: false, created_by: 'chairperson', created_at: new Date().toISOString() }
   ];
 
   let MOCK_DC_CASES: any[] = [
@@ -385,7 +385,7 @@ export function setupMockApi(api: AxiosInstance) {
 
   mock.onPost('/programmes/').reply((config) => {
     const data = JSON.parse(config.data);
-    const newProg = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
+    const newProg = { ...data, id: Date.now().toString(), is_big_event: !!data.is_big_event, created_at: new Date().toISOString() };
     MOCK_PROGRAMMES.push(newProg);
     return [201, newProg];
   });
