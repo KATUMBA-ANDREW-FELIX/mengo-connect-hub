@@ -23,7 +23,7 @@ interface NavItem {
 
 const sidebarLinks: NavItem[] = [
   { label: "Dashboard", path: "/portal", icon: LayoutDashboard },
-  { label: "Student Voices Management", path: "/portal/student-voices", icon: MessageSquare,
+  { label: "Student Voices", path: "/portal/student-voices", icon: MessageSquare,
     roles: ["patron", "chairperson", "general_secretary", "assistant_general_secretary"] },
   { label: "Issues Management", path: "/portal/issues", icon: AlertTriangle },
   { label: "Programmes & Calendar", path: "/portal/programmes", icon: Calendar },
