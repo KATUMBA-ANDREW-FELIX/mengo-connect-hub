@@ -26,7 +26,7 @@ const sidebarLinks: NavItem[] = [
   { label: "Student Voices", path: "/portal/student-voices", icon: MessageSquare,
     roles: ["patron", "chairperson", "general_secretary", "assistant_general_secretary"] },
   { label: "Issues Management", path: "/portal/issues", icon: AlertTriangle },
-  { label: "Programmes & Calendar", path: "/portal/programmes", icon: Calendar },
+  { label: "Programmes", path: "/portal/programmes", icon: Calendar },
   { label: "Rota Management", path: "/portal/rota", icon: Users },
   { label: "Documents & Minutes", path: "/portal/documents", icon: FileText },
   { label: "Requisitions", path: "/portal/requisitions", icon: DollarSign,
