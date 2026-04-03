@@ -20,8 +20,28 @@ export function TimelineSection() {
   useEffect(() => {
     const fetchTimeline = async () => {
       try {
-        const { data } = await api.get("/timeline/");
-        setEvents(data.results || []);
+        const { data } = await api.get("/programmes/");
+        const majorEvents = (data.results || []).filter((p: any) => p.visibility === "public" && p.is_big_event);
+        
+        const mappedEvents = majorEvents.map((p: any) => {
+          const eventDate = new Date(p.event_date || p.created_at);
+          const now = new Date();
+          let status: "Upcoming" | "Completed" | "In Progress" = "Upcoming";
+          if (eventDate < now) status = "Completed";
+          if (eventDate.toDateString() === now.toDateString()) status = "In Progress";
+
+          return {
+            id: p.id,
+            date: eventDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+            status,
+            title: p.title,
+            description: p.description || "Details to be announced.",
+            location: "Mengo Senior School"
+          };
+        });
+
+        mappedEvents.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        setEvents(mappedEvents);
       } catch (e) {
         console.error("Failed to fetch timeline:", e);
       } finally {
