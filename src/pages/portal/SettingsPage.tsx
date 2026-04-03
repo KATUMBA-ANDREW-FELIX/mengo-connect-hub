@@ -18,6 +18,17 @@ export default function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const canEditName = hasAnyRole(["chairperson", "patron", "adminabsolute"]);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePic(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
@@ -55,13 +66,30 @@ export default function SettingsPage() {
             {!canEditName && <p className="text-xs text-muted-foreground">Only Admins can change official names.</p>}
           </div>
           <div className="space-y-2">
-            <Label>Profile Picture URL</Label>
-            <Input 
-              value={profilePic} 
-              onChange={e => setProfilePic(e.target.value)} 
-              placeholder="https://example.com/photo.jpg" 
-            />
-            {profilePic && <img src={profilePic} alt="Preview" className="h-16 w-16 rounded-full border object-cover mt-2" />}
+            <Label>Profile Picture</Label>
+            <div className="flex items-center gap-4 mt-2">
+              <div className="relative h-16 w-16 overflow-hidden rounded-full border bg-muted">
+                {profilePic ? (
+                  <img src={profilePic} alt="Preview" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">None</div>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="picture" className="cursor-pointer">
+                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                    Upload Picture
+                  </div>
+                </Label>
+                <Input 
+                  id="picture"
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleImageChange} 
+                  className="hidden" 
+                />
+              </div>
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Introduction / Bio</Label>
