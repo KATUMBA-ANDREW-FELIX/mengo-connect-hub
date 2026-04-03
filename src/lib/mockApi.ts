@@ -180,6 +180,8 @@ export function setupMockApi(api: AxiosInstance) {
     { id: '2', title: 'Council Strategy Meeting', description: 'Private meeting for incoming strategies.', event_date: new Date(Date.now() + 86400000 * 2).toISOString(), visibility: 'private', is_big_event: false, created_by: 'chairperson', created_at: new Date().toISOString() }
   ];
 
+  let MOCK_ROTAS: any[] = [];
+
   let MOCK_DC_CASES: any[] = [
     { id: '1', offender_name: 'Student A', category: 'Insubordination', description: 'Refusal to follow head prefect instructions during assembly.', status: 'Pending', reported_by: 'merecouncillor', created_at: new Date().toISOString() }
   ];
@@ -453,6 +455,30 @@ export function setupMockApi(api: AxiosInstance) {
    mock.onDelete(/\/student-voices\/\d+\//).reply((config) => {
      const id = config.url?.split('/')[2];
      MOCK_STUDENT_VOICES = MOCK_STUDENT_VOICES.filter(v => v.id !== id);
+     return [204, {}];
+   });
+
+   // Rota Endpoints
+   mock.onGet('/rotas/').reply(200, { results: MOCK_ROTAS });
+   mock.onPost('/rotas/').reply((config) => {
+     const data = JSON.parse(config.data);
+     const newRota = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
+     MOCK_ROTAS.unshift(newRota);
+     return [201, newRota];
+   });
+   mock.onPatch(/\/rotas\/\d+\//).reply((config) => {
+     const id = config.url?.split('/')[2];
+     const data = JSON.parse(config.data);
+     const index = MOCK_ROTAS.findIndex(r => r.id === id);
+     if (index !== -1) {
+       MOCK_ROTAS[index] = { ...MOCK_ROTAS[index], ...data };
+       return [200, MOCK_ROTAS[index]];
+     }
+     return [404, { detail: 'Rota not found' }];
+   });
+   mock.onDelete(/\/rotas\/\d+\//).reply((config) => {
+     const id = config.url?.split('/')[2];
+     MOCK_ROTAS = MOCK_ROTAS.filter(r => r.id !== id);
      return [204, {}];
    });
  

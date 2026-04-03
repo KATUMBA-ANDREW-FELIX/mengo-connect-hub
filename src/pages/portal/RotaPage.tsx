@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, Plus, Pencil, Trash2, Save } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Save, Printer } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -46,6 +46,22 @@ export default function RotaPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editWeek, setEditWeek] = useState("");
   const [editDuties, setEditDuties] = useState<Duty[]>([]);
+
+  // Export State
+  const [exportingRota, setExportingRota] = useState<RotaRow | null>(null);
+  const [exportTitle, setExportTitle] = useState("");
+  const [exportSubtitle, setExportSubtitle] = useState("THE OFFICE OF THE GENERAL SECRETARY");
+  const [exportH1, setExportH1] = useState("Supervisors");
+  const [exportH2, setExportH2] = useState("Females");
+  const [exportH3, setExportH3] = useState("Males");
+
+  const startExport = (rota: RotaRow) => {
+    setExportTitle(rota.week.toUpperCase());
+    setExportH1("Supervisors");
+    setExportH2("Females");
+    setExportH3("Males");
+    setExportingRota(rota);
+  };
 
   const fetchRotas = async () => {
     try {
@@ -157,6 +173,123 @@ export default function RotaPage() {
 
   if (loading) return <p className="text-sm text-muted-foreground p-4">Loading…</p>;
 
+  if (exportingRota) {
+    return (
+      <div className="bg-background min-h-screen">
+        <style>{`
+          @media print {
+            body * { visibility: hidden; }
+            #rota-printable, #rota-printable * { visibility: visible; }
+            #rota-printable { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none !important; border: none !important; }
+            .no-print { display: none !important; }
+            @page { margin: 1cm; size: auto; }
+          }
+        `}</style>
+
+        <div className="max-w-4xl mx-auto space-y-6 pt-4 pb-12">
+          {/* Controls - Hidden on print */}
+          <div className="no-print flex flex-col md:flex-row gap-4 justify-between items-center bg-card p-4 rounded-xl border shadow-sm">
+             <div className="flex-1 space-y-3 w-full">
+               <div className="flex flex-col sm:flex-row gap-2">
+                 <Input value={exportSubtitle} onChange={e => setExportSubtitle(e.target.value)} placeholder="Subtitle (e.g. THE OFFICE OF...)" className="flex-1 text-xs sm:text-sm" />
+                 <Input value={exportTitle} onChange={e => setExportTitle(e.target.value)} placeholder="Main Title (e.g. ROTA 2026)" className="flex-1 text-xs sm:text-sm font-bold border-primary" />
+               </div>
+               <div className="flex flex-col sm:flex-row gap-2">
+                 <Input value={exportH1} onChange={e => setExportH1(e.target.value)} placeholder="Column 1 Header" className="flex-1 text-xs sm:text-sm" />
+                 <Input value={exportH2} onChange={e => setExportH2(e.target.value)} placeholder="Column 2 Header" className="flex-1 text-xs sm:text-sm" />
+                 <Input value={exportH3} onChange={e => setExportH3(e.target.value)} placeholder="Column 3 Header" className="flex-1 text-xs sm:text-sm" />
+               </div>
+             </div>
+             <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full md:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto" onClick={() => setExportingRota(null)}>Cancel</Button>
+                <Button className="w-full sm:w-auto" onClick={() => window.print()}><Printer className="w-4 h-4 mr-2"/> Print</Button>
+             </div>
+          </div>
+
+          {/* Printable Template */}
+          <div id="rota-printable" className="bg-white text-black border border-black p-0 shadow-lg">
+            <div className="text-center p-6 border-b border-black">
+              <h2 className="font-serif font-black text-xl sm:text-2xl uppercase tracking-wider text-black">{exportSubtitle}</h2>
+              <h3 className="font-bold text-lg sm:text-xl mt-1 uppercase text-black">{exportTitle}</h3>
+            </div>
+            
+            <table className="w-full border-collapse text-sm bg-white">
+              <thead>
+                <tr>
+                  <th className="border border-black p-3 text-left font-bold uppercase w-24 text-black">Day</th>
+                  <th className="border border-black p-3 text-left font-bold uppercase w-1/3 text-black">{exportH1}</th>
+                  <th className="border border-black p-0 text-left font-bold uppercase w-1/2 text-black">
+                    <div className="border-b border-black p-3 text-center">{exportTitle.includes("LUNCH") ? "Councillors on Duty" : "Assignments"}</div>
+                    <div className="flex">
+                      <div className="flex-1 border-r border-black p-3">{exportH2}</div>
+                      <div className="flex-1 p-3">{exportH3}</div>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="align-top font-medium leading-relaxed bg-white text-black">
+                {["Mon", "Tue", "Wed", "Thu", "Fri"].map(day => {
+                  const dayDuties = exportingRota.duties.filter(d => d.day === day);
+                  const formatAssigned = (duty?: Duty) => {
+                     if (!duty) return "";
+                     return duty.assigned.split(',').map((n, i) => <span key={i} className="block">{n.trim()}</span>);
+                  };
+                  return (
+                    <tr key={day}>
+                      <td className="border border-black p-3 font-bold uppercase">
+                        {day === "Mon" ? "MONDAY" : day === "Tue" ? "TUESDAY" : day === "Wed" ? "WEDNESDAY" : day === "Thu" ? "THURSDAY" : "FRIDAY"}
+                      </td>
+                      <td className="border border-black p-3">{formatAssigned(dayDuties[0])}</td>
+                      <td className="border border-black p-0">
+                        <div className="flex h-full min-h-[60px]">
+                          <div className="flex-1 border-r border-black p-3">{formatAssigned(dayDuties[1])}</div>
+                          <div className="flex-1 p-3">{formatAssigned(dayDuties[2])}</div>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+
+            <div className="mt-8 text-xs p-5 pb-0 text-black">
+              <h4 className="font-bold underline mb-2">NOTE:</h4>
+              <ul className="list-disc pl-5 space-y-1.5 font-medium uppercase text-[10px] sm:text-xs text-black/80">
+                <li>ALL COUNCILLORS AND SUPERVISORS ARE EXPECTED AT THE LUNCH LINES BY 1:15 P.M.</li>
+                <li>DEFAULTING WILL RESULT INTO PAYMENT OF A FINE OF sh.3000 TO THE SEC. FINANCE</li>
+                <li>ANY COUNCILLOR THAT WILL NOT BE ABLE TO SHOW UP ON THE LUNCH LINES SHOULD ENSURE PRIOR COMMUNICATION IS MADE TO THEIR SUPERVISORS.</li>
+                <li>FOR CONCERNS RELATING TO THE ROTA, REACH OUT TO THE GEN. SEC. OR ASST. GEN. SEC.</li>
+              </ul>
+            </div>
+
+            <div className="mt-12 flex justify-between items-start pt-8 p-5 text-black">
+              <div className="space-y-4">
+                <p className="font-bold uppercase text-xs">ASSISTANT GENERAL SECRETARY</p>
+                <div className="h-10 italic text-black/40 text-xl font-serif">Signed</div>
+                <p className="font-bold uppercase text-sm border-t border-dashed border-black pt-1">NSAMBA ORETHA GLORIA</p>
+              </div>
+              
+              <div className="space-y-4 text-left">
+                <p className="font-bold uppercase text-xs">GENERAL SECRETARY</p>
+                <div className="h-10 italic text-black/40 text-xl font-serif"></div>
+                <p className="font-bold uppercase text-sm border-t border-dashed border-black pt-1">KWAGALA SIMONPETER ALVIN</p>
+              </div>
+            </div>
+            
+            <div className="flex justify-center mt-8 pb-8 text-black">
+              <div className="border-4 border-black/80 rounded-xl px-6 py-4 inline-block text-center transform -rotate-3">
+                 <p className="font-bold uppercase text-xs">MENGO SENIOR SCHOOL</p>
+                 <p className="text-[10px]">P. O. BOX 1901, KAMPALA</p>
+                 <p className="font-bold my-1 text-sm tracking-widest leading-none">{new Date().toLocaleDateString('en-GB').replace(/\//g, ' ')}</p>
+                 <p className="font-bold uppercase text-[10px]">STUDENTS COUNCIL</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -197,6 +330,7 @@ export default function RotaPage() {
               </span>
               {canEdit && editingId !== rota.id && (
                 <span className="flex gap-1">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startExport(rota)}><Printer className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(rota)}><Pencil className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(rota.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                 </span>
