@@ -25,7 +25,10 @@ export default function PublicBlogPage() {
       .finally(() => setLoadingBlogs(false));
       
     api.get("/programmes/")
-      .then(({ data }) => setProgrammes(data.results || []))
+      .then(({ data }) => {
+         const fetched = data.results || [];
+         setProgrammes(fetched.filter((p: any) => p.visibility === 'public'));
+      })
       .catch(() => {})
       .finally(() => setLoadingProgs(false));
 

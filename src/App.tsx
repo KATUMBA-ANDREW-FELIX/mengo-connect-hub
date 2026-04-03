@@ -67,7 +67,7 @@ const App = () => (
               </Route>
 
               {/* Blog Manager – Publicity & leadership */}
-              <Route element={<RoleGuard allowedRoles={["chairperson", "general_secretary", "secretary_publicity"]} />}>
+              <Route element={<RoleGuard allowedRoles={["chairperson", "general_secretary", "secretary_publicity", "adminabsolute"]} />}>
                 <Route path="blog" element={<BlogManagerPage />} />
               </Route>
               

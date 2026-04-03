@@ -41,7 +41,7 @@ const sidebarLinks: NavItem[] = [
   { label: "Register Patron", path: "/portal/register-patron", icon: Shield,
     roles: ["chairperson"] },
   { label: "Blog Manager", path: "/portal/blog", icon: FileText,
-    roles: ["chairperson", "secretary_publicity"] },
+    roles: ["chairperson", "secretary_publicity", "general_secretary", "adminabsolute"] },
   { label: "Disciplinary Actions", path: "/portal/disciplinary", icon: Scale,
     roles: ["disciplinary_committee", "chairperson", "vice_chairperson", "general_secretary"] },
 ];
