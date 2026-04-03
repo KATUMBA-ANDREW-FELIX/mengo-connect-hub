@@ -32,7 +32,7 @@ const sidebarLinks: NavItem[] = [
   { label: "Documents & Minutes", path: "/portal/documents", icon: FileText },
   { label: "Requisitions", path: "/portal/requisitions", icon: DollarSign,
     roles: ["patron", "chairperson", "secretary_finance"] },
-  { label: "Elections Management", path: "/portal/elections", icon: Vote,
+  { label: "Elections", path: "/portal/elections", icon: Vote,
     roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
   { label: "Hierarchy Tree", path: "/portal/hierarchy", icon: Network },
   { label: "Activity Logs", path: "/portal/logs", icon: Activity,
