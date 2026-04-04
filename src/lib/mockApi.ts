@@ -116,6 +116,7 @@ let MOCK_NOTIFICATIONS: any[] = [
   { id: '1', title: 'Welcome!', message: 'Welcome to the new portal.', type: 'info', read: false, created_at: new Date().toISOString() }
 ];
 
+let MOCK_ROTAS: any[] = [];
 let MOCK_EC_GRANTS: any[] = [];
 let MOCK_ELECTION_LOCKS: any[] = [];
 
@@ -170,6 +171,10 @@ export function setupMockApi(api: AxiosInstance) {
   mock.onGet('/users/all-roles/').reply(() => [200, Object.values(USERS).map(u => ({ user_id: u.user.id, role: u.roles[0] }))]);
 
   mock.onPost('/users/register/').reply(() => [201, { message: "Registered" }]);
+
+  mock.onGet(/\/users\/councillors\/?$/).reply(() => {
+    return [200, { results: Object.values(USERS).map(u => ({ ...u.profile, roles: u.roles })) }];
+  });
 
   // Action Plans
   mock.onGet('/action-plans/').reply(() => [200, { results: MOCK_ACTION_PLANS }]);
@@ -323,6 +328,28 @@ export function setupMockApi(api: AxiosInstance) {
   mock.onPost('/users/update-hierarchy/').reply((config) => {
     MOCK_TREE = JSON.parse(config.data);
     return [200, { results: MOCK_TREE }];
+  });
+
+  // Rotas
+  mock.onGet(/\/rotas\/?$/).reply(() => [200, { results: MOCK_ROTAS }]);
+  mock.onPost(/\/rotas\/?$/).reply((config) => {
+    const data = JSON.parse(config.data);
+    const rota = { id: Date.now().toString(), ...data };
+    MOCK_ROTAS.push(rota);
+    return [201, rota];
+  });
+  mock.onPatch(/\/rotas\/[\w-]+\//).reply((config) => {
+    const id = config.url?.split('/').slice(-2, -1)[0];
+    const data = JSON.parse(config.data);
+    const idx = MOCK_ROTAS.findIndex(r => r.id === id);
+    if (idx !== -1) { MOCK_ROTAS[idx] = { ...MOCK_ROTAS[idx], ...data }; return [200, MOCK_ROTAS[idx]]; }
+    return [404, {}];
+  });
+  mock.onDelete(/\/rotas\/[\w-]+\//).reply((config) => {
+    const id = config.url?.split('/').slice(-2, -1)[0];
+    const idx = MOCK_ROTAS.findIndex(r => r.id === id);
+    if (idx !== -1) { MOCK_ROTAS.splice(idx, 1); return [204, {}]; }
+    return [404, {}];
   });
 
   // Others

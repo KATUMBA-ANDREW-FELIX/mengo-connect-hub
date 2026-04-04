@@ -177,11 +177,13 @@ export default function RotaPage() {
 
   const fetchCouncillors = async () => {
     try {
-      const { data } = await api.get("/users/councillors/");
-      const list = Array.isArray(data) ? data : data.results || [];
+      const response = await api.get("/users/councillors/");
+      const data = response.data;
+      const list = Array.isArray(data) ? data : (data.results || data.profiles || []);
       setCouncillors(list);
     } catch (e) {
-      console.error("Failed to load councillors", e);
+      console.error("RotaPage: Failed to load councillors", e);
+      setCouncillors([]);
     }
   };
 
@@ -324,86 +326,86 @@ export default function RotaPage() {
           </div>
 
           {/* Printable Template */}
-          <div id="rota-printable" className="bg-white text-black border border-black p-0 shadow-lg">
-            <div className="text-center p-6 border-b border-black">
-              <h2 className="font-serif font-black text-xl sm:text-2xl uppercase tracking-wider text-black">{exportSubtitle}</h2>
-              <h3 className="font-bold text-lg sm:text-xl mt-1 uppercase text-black">{exportTitle}</h3>
-            </div>
+          {(() => {
+            const genSec = councillors.find(c => c.roles?.includes('general_secretary'))?.full_name || "KWAGALA SIMONPETER ALVIN";
+            const asstGenSec = councillors.find(c => c.roles?.includes('assistant_general_secretary'))?.full_name || "NSAMBA ORETHA GLORIA";
             
-            <table className="w-full border-collapse text-sm bg-white">
-              <thead>
-                <tr>
-                  <th className="border border-black p-3 text-left font-bold uppercase w-24 text-black">Day</th>
-                  <th className="border border-black p-3 text-left font-bold uppercase w-1/3 text-black">{exportH1}</th>
-                  <th className="border border-black p-0 text-left font-bold uppercase w-1/2 text-black">
-                    <div className="border-b border-black p-3 text-center">{exportTitle.includes("LUNCH") ? "Councillors on Duty" : "Assignments"}</div>
-                    <div className="flex">
-                      <div className="flex-1 border-r border-black p-3">{exportH2}</div>
-                      <div className="flex-1 p-3">{exportH3}</div>
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="align-top font-medium leading-relaxed bg-white text-black">
-                {["Mon", "Tue", "Wed", "Thu", "Fri"].map(day => {
-                  const { supervisors, females, males } = categorizeByDay(day);
-                  return (
-                    <tr key={day}>
-                      <td className="border border-black p-3 font-bold uppercase">
-                        {day === "Mon" ? "MONDAY" : day === "Tue" ? "TUESDAY" : day === "Wed" ? "WEDNESDAY" : day === "Thu" ? "THURSDAY" : "FRIDAY"}
-                      </td>
-                      <td className="border border-black p-3">
-                        {supervisors.map((s, i) => <span key={i} className="block">{s}</span>)}
-                      </td>
-                      <td className="border border-black p-0">
-                        <div className="flex h-full min-h-[60px]">
-                          <div className="flex-1 border-r border-black p-3">
-                            {females.map((f, i) => <span key={i} className="block">{f}</span>)}
-                          </div>
-                          <div className="flex-1 p-3">
-                            {males.map((m, i) => <span key={i} className="block">{m}</span>)}
-                          </div>
+            return (
+              <div id="rota-printable" className="bg-white text-black border border-black p-0 shadow-lg">
+                <div className="text-center p-6 border-b border-black">
+                  <h2 className="font-serif font-black text-xl sm:text-2xl uppercase tracking-wider text-black">{exportSubtitle}</h2>
+                  <h3 className="font-bold text-lg sm:text-xl mt-1 uppercase text-black">{exportTitle}</h3>
+                </div>
+                
+                <table className="w-full border-collapse text-sm bg-white">
+                  <thead>
+                    <tr>
+                      <th className="border border-black p-3 text-left font-bold uppercase w-24 text-black">Day</th>
+                      <th className="border border-black p-3 text-left font-bold uppercase w-1/3 text-black">{exportH1}</th>
+                      <th className="border border-black p-0 text-left font-bold uppercase w-1/2 text-black">
+                        <div className="border-b border-black p-3 text-center">{exportTitle.includes("LUNCH") ? "Councillors on Duty" : "Assignments"}</div>
+                        <div className="flex">
+                          <div className="flex-1 border-r border-black p-3">{exportH2}</div>
+                          <div className="flex-1 p-3">{exportH3}</div>
                         </div>
-                      </td>
+                      </th>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="align-top font-medium leading-relaxed bg-white text-black">
+                    {["Mon", "Tue", "Wed", "Thu", "Fri"].map(day => {
+                      const { supervisors, females, males } = categorizeByDay(day);
+                      return (
+                        <tr key={day}>
+                          <td className="border border-black p-3 font-bold uppercase">
+                            {day === "Mon" ? "MONDAY" : day === "Tue" ? "TUESDAY" : day === "Wed" ? "WEDNESDAY" : day === "Thu" ? "THURSDAY" : "FRIDAY"}
+                          </td>
+                          <td className="border border-black p-3">
+                            {supervisors.map((s, i) => <span key={i} className="block">{s}</span>)}
+                          </td>
+                          <td className="border border-black p-0">
+                            <div className="flex h-full min-h-[60px]">
+                              <div className="flex-1 border-r border-black p-3">
+                                {females.map((f, i) => <span key={i} className="block">{f}</span>)}
+                              </div>
+                              <div className="flex-1 p-3">
+                                {males.map((m, i) => <span key={i} className="block">{m}</span>)}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
 
-            <div className="mt-8 text-xs p-5 pb-0 text-black">
-              <h4 className="font-bold underline mb-2">NOTE:</h4>
-              <ul className="list-disc pl-5 space-y-1.5 font-medium uppercase text-[10px] sm:text-xs text-black/80">
-                <li>ALL COUNCILLORS AND SUPERVISORS ARE EXPECTED AT THE LUNCH LINES BY 1:15 P.M.</li>
-                <li>DEFAULTING WILL RESULT INTO PAYMENT OF A FINE OF sh.3000 TO THE SEC. FINANCE</li>
-                <li>ANY COUNCILLOR THAT WILL NOT BE ABLE TO SHOW UP ON THE LUNCH LINES SHOULD ENSURE PRIOR COMMUNICATION IS MADE TO THEIR SUPERVISORS.</li>
-                <li>FOR CONCERNS RELATING TO THE ROTA, REACH OUT TO THE GEN. SEC. OR ASST. GEN. SEC.</li>
-              </ul>
-            </div>
+                <div className="mt-8 text-xs p-5 pb-0 text-black">
+                  <h4 className="font-bold underline mb-2">NOTE:</h4>
+                  <ul className="list-disc pl-5 space-y-1.5 font-medium uppercase text-[10px] sm:text-xs text-black/80">
+                    <li>ALL COUNCILLORS AND SUPERVISORS ARE EXPECTED AT THE LUNCH LINES BY 1:15 P.M.</li>
+                    <li>DEFAULTING WILL RESULT INTO PAYMENT OF A FINE OF sh.3000 TO THE SEC. FINANCE</li>
+                    <li>ANY COUNCILLOR THAT WILL NOT BE ABLE TO SHOW UP ON THE LUNCH LINES SHOULD ENSURE PRIOR COMMUNICATION IS MADE TO THEIR SUPERVISORS.</li>
+                    <li>FOR CONCERNS RELATING TO THE ROTA, REACH OUT TO THE GEN. SEC. OR ASST. GEN. SEC.</li>
+                  </ul>
+                </div>
 
-            <div className="mt-12 flex justify-between items-start pt-8 p-5 text-black">
-              <div className="space-y-4">
-                <p className="font-bold uppercase text-xs">ASSISTANT GENERAL SECRETARY</p>
-                <div className="h-10 italic text-black/40 text-xl font-serif">Signed</div>
-                <p className="font-bold uppercase text-sm border-t border-dashed border-black pt-1">NSAMBA ORETHA GLORIA</p>
+                <div className="mt-12 flex justify-between items-start pt-8 p-5 text-black">
+                  <div className="space-y-4">
+                    <p className="font-bold uppercase text-xs">ASSISTANT GENERAL SECRETARY</p>
+                    <div className="h-10 italic text-black/40 text-xl font-serif">Signed</div>
+                    <p className="font-bold uppercase text-sm border-t border-dashed border-black pt-1">{asstGenSec}</p>
+                  </div>
+                  
+                  <div className="space-y-4 text-left">
+                    <p className="font-bold uppercase text-xs">GENERAL SECRETARY</p>
+                    <div className="h-10 italic text-black/40 text-xl font-serif"></div>
+                    <p className="font-bold uppercase text-sm border-t border-dashed border-black pt-1">{genSec}</p>
+                  </div>
+                </div>
+                
+                <div className="pb-8"></div>
               </div>
-              
-              <div className="space-y-4 text-left">
-                <p className="font-bold uppercase text-xs">GENERAL SECRETARY</p>
-                <div className="h-10 italic text-black/40 text-xl font-serif"></div>
-                <p className="font-bold uppercase text-sm border-t border-dashed border-black pt-1">KWAGALA SIMONPETER ALVIN</p>
-              </div>
-            </div>
-            
-            <div className="flex justify-center mt-8 pb-8 text-black">
-              <div className="border-4 border-black/80 rounded-xl px-6 py-4 inline-block text-center transform -rotate-3">
-                 <p className="font-bold uppercase text-xs">MENGO SENIOR SCHOOL</p>
-                 <p className="text-[10px]">P. O. BOX 1901, KAMPALA</p>
-                 <p className="font-bold my-1 text-sm tracking-widest leading-none">{new Date().toLocaleDateString('en-GB').replace(/\//g, ' ')}</p>
-                 <p className="font-bold uppercase text-[10px]">STUDENTS COUNCIL</p>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
         </div>
       </div>
     );
