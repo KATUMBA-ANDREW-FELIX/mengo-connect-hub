@@ -17,6 +17,7 @@
 
 > [!IMPORTANT]
 > **Password Management Protocol**:
+>
 > 1. New members are registered with a **temporary password** set by the Admin.
 > 2. Members are expected to change this password immediately via the **Security** section in their profile settings.
 > 3. If a user forgets their password, the `forgot-password` endpoint must trigger an **Urgent Notification** to the **Admin Absolute** and **Patron** to regenerate a new temporary password for that user.
@@ -67,22 +68,26 @@
 - `PATCH /api/requisitions/<id>/` : Updates the status (Approve / Reject).
 
 ## Rota (Duty Assignments) (`/api/rotas/`)
+
 - `GET /api/rotas/` : Returns weekly duty rotas.
 - `POST /api/rotas/` : Creates a new rota object. Payload `{ week, duties: [{day, task, assigned}] }`.
 - `PATCH /api/rotas/<id>/` : Updates an existing rota.
 - `DELETE /api/rotas/<id>/` : Deletes a specific rota.
 
 ## Elections (`/api/applications/` and `/api/ec-access-grants/`)
+
 - `GET /api/applications/` : Returns all election candidate applications.
 - `POST /api/applications/` : Submits a new candidate application.
 - `PATCH /api/applications/<id>/` : Updates the application status.
 - `POST /api/applications/auto-screen/` : Auto-filters applications based on `min_average`.
 - `GET /api/ec-access-grants/` : Returns electoral commission access grants.
-- `POST /api/ec-access-grants/` : Grants EC access to a specified user. 
+- `POST /api/ec-access-grants/` : Grants EC access to a specified user.
 - `DELETE /api/ec-access-grants/<id>/` : Revokes EC access.
 
 ---
+
 **Data Format Notes:**
+
 - Most endpoints assume JSON payload requests (`application/json`).
 - Endpoints receiving files (e.g., Documents, Student Voices) will receive standard `multipart/form-data`.
 - By default, standard list responses should return either a raw JSON array: `[{ ... }]` OR a paginated object: `{ "results": [{ ... }] }`. The frontend is designed to handle both.
