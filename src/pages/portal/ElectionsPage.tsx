@@ -14,6 +14,7 @@ import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
+import DocumentViewer from "@/components/portal/DocumentViewer";
 
 const generateAutoComment = (smart: number, conf: number, qapp: number, total: number) => {
   if (total >= 25) return "Exceptionally good";
@@ -52,8 +53,9 @@ export default function ElectionsPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
-  const [exportType, setExportType] = useState<"qualified" | "ballot" | "screening">("qualified");
+  const [exportType, setExportType] = useState<"qualified" | "ballot" | "screening" | "criteria">("qualified");
   const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Excel Upload
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -477,8 +479,11 @@ export default function ElectionsPage() {
     y += 10;
     doc.text("EC Chairperson Signature: __________________", 20, y);
 
-    doc.save(`Screening_Criteria_${filterId}.pdf`);
-    toast.success("Criteria log generated!");
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
+    setIsExportOpen(false);
+    toast.success("Criteria log preview generated!");
   };
 
   const generateQualifiedPDF = async () => {
@@ -541,9 +546,11 @@ export default function ElectionsPage() {
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
     doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
-    doc.save(`${getDynamicTitle().replace(/\s+/g, '_')}_Qualified_List.pdf`);
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
     setIsExportOpen(false);
-    toast.success("Qualified List PDF downloaded!");
+    toast.success("Qualified list preview generated!");
   };
 
   const generateBallotPDF = async () => {
@@ -643,9 +650,11 @@ export default function ElectionsPage() {
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
     doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
-    doc.save(`${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
     setIsExportOpen(false);
-    toast.success("Ballot PDF downloaded!");
+    toast.success("Ballot preview generated!");
   };
 
   const generateScreeningReportPDF = async () => {
@@ -715,9 +724,11 @@ export default function ElectionsPage() {
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
     doc.text(exportFooterText, pageW / 2, 200, { align: "center" });
 
-    doc.save(`Screening_Report_${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
     setIsExportOpen(false);
-    toast.success("Screening Report PDF downloaded!");
+    toast.success("Screening report preview generated!");
   };
 
   return (
@@ -918,8 +929,9 @@ export default function ElectionsPage() {
             <Button onClick={() => {
               if (exportType === "qualified") generateQualifiedPDF();
               else if (exportType === "ballot") generateBallotPDF();
-              else generateScreeningReportPDF();
-            }}>Generate PDF</Button>
+              else if (exportType === "screening") generateScreeningReportPDF();
+              else if (exportType === "criteria") generateCriteriaPDF();
+            }}>View Preview</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1105,9 +1117,9 @@ export default function ElectionsPage() {
                     <Lock className="mr-1 h-3 w-3" /> Lock Criteria
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={generateCriteriaPDF}>
-                  <FileText className="mr-1 h-3 w-3" /> Log Criteria
-                </Button>
+                  <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={() => { setExportType("criteria"); setIsExportOpen(true); }}>
+                    <FileText className="mr-1 h-3 w-3" /> Log Criteria
+                  </Button>
                 <Button 
                   variant="outline" 
                   className="border-stone-300 text-xs px-6 font-bold hover:bg-white" 
@@ -1249,6 +1261,13 @@ export default function ElectionsPage() {
           </div>
         </CardContent>
       </Card>
+      <DocumentViewer 
+        isOpen={!!previewUrl} 
+        onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
+        fileUrl={previewUrl} 
+        title={`Election Document Preview`} 
+        type="pdf"
+      />
     </div>
   );
 }

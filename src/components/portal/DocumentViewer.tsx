@@ -8,17 +8,30 @@ interface DocumentViewerProps {
   onClose: () => void;
   fileUrl: string | null;
   title: string;
+  type?: 'pdf' | 'image' | 'office' | 'auto';
 }
 
-export default function DocumentViewer({ isOpen, onClose, fileUrl, title }: DocumentViewerProps) {
-  const isImage = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(fileUrl);
-  const isPDF = /\.pdf$/i.test(fileUrl);
-  const isOffice = /\.(docx|doc|xlsx|xls|pptx|ppt)$/i.test(fileUrl);
+export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type = 'auto' }: DocumentViewerProps) {
+  if (!fileUrl) return null;
+
+  const getExt = (url: string) => {
+    try {
+      const path = url.split('?')[0].split('#')[0];
+      return path.split('.').pop()?.toLowerCase() || "";
+    } catch { return ""; }
+  };
+
+  const ext = getExt(fileUrl);
+  const isBlob = fileUrl.startsWith('blob:');
+  
+  const isImage = type === 'image' || (type === 'auto' && /^(jpg|jpeg|png|webp|gif|svg)$/i.test(ext));
+  const isPDF = type === 'pdf' || isBlob || (type === 'auto' && ext === 'pdf');
+  const isOffice = type === 'office' || (type === 'auto' && /^(docx|doc|xlsx|xls|pptx|ppt)$/i.test(ext));
 
   const handleDownload = () => {
     const a = document.createElement("a");
     a.href = fileUrl;
-    a.download = title;
+    a.download = title.endsWith(ext) ? title : `${title}.${ext || 'pdf'}`;
     a.target = "_blank";
     document.body.appendChild(a);
     a.click();
@@ -26,7 +39,7 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title }: Docu
   };
 
   const getViewerUrl = () => {
-    if (isOffice) {
+    if (isOffice && !isBlob) {
       return `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
     }
     return fileUrl;

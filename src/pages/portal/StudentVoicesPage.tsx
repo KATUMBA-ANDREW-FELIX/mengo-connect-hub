@@ -19,6 +19,7 @@ import jsPDF from "jspdf";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
 import { format } from "date-fns";
+import DocumentViewer from "@/components/portal/DocumentViewer";
 
 interface Voice {
   id: string; title: string; category: string; description: string;
@@ -74,6 +75,7 @@ export default function StudentVoicesPage() {
   const [deleting, setDeleting] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const fetchVoices = async () => {
     try {
@@ -228,9 +230,11 @@ export default function StudentVoicesPage() {
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
     doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
-    doc.save(`Student_Voices_Report_${Date.now()}.pdf`);
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
     setIsExportOpen(false);
-    toast.success("Voices report exported!");
+    toast.success("Voices report preview generated!");
   };
 
   const isChairperson = hasAnyRole(["chairperson"]);
@@ -332,10 +336,10 @@ export default function StudentVoicesPage() {
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
-              <Button onClick={generatePDFReport}>Generate PDF</Button>
-            </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+                <Button onClick={generatePDFReport}>View Preview</Button>
+              </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -658,6 +662,13 @@ export default function StudentVoicesPage() {
           )}
         </DialogContent>
       </Dialog>
+      <DocumentViewer 
+        isOpen={!!previewUrl} 
+        onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
+        fileUrl={previewUrl} 
+        title={`Student Voices Report`} 
+        type="pdf"
+      />
     </div>
   );
 }

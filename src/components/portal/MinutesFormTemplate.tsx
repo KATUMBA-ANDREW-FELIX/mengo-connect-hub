@@ -11,7 +11,8 @@ import { api } from "@/lib/api";
 import jsPDF from "jspdf";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import DocumentViewer from "@/components/portal/DocumentViewer";
 
 interface Attendee { name: string; position: string; }
 interface Resolution { point: string; byWho: string; deadline: string; }
@@ -21,6 +22,7 @@ export default function MinutesFormTemplate({ onSuccess }: { onSuccess: () => vo
   const [showOfficeSelect, setShowOfficeSelect] = useState(false);
   const [selectedOffice, setSelectedOffice] = useState("");
   const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     meetingType: "Cabinet Meeting",
@@ -155,12 +157,8 @@ export default function MinutesFormTemplate({ onSuccess }: { onSuccess: () => vo
     try {
       const pdfBlob = await generatePDF();
       const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Preview_Minutes_${formData.meetingType.replace(/\s+/g, "_")}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("PDF Preview downloaded successfully!");
+      setPreviewUrl(url);
+      toast.success("PDF Preview generated!");
     } catch (e) {
       toast.error("Failed to generate preview");
     } finally {
@@ -300,7 +298,7 @@ export default function MinutesFormTemplate({ onSuccess }: { onSuccess: () => vo
           disabled={loading || !formData.agenda || !formData.deliberations}
           className="border-primary text-primary hover:bg-primary/5"
         >
-          <FileText className="mr-2 h-4 w-4"/> Download PDF Preview
+          <FileText className="mr-2 h-4 w-4"/> View PDF Preview
         </Button>
         <Dialog open={showOfficeSelect} onOpenChange={setShowOfficeSelect}>
           <DialogTrigger asChild>
@@ -323,6 +321,14 @@ export default function MinutesFormTemplate({ onSuccess }: { onSuccess: () => vo
           </DialogContent>
         </Dialog>
       </div>
+
+      <DocumentViewer 
+        isOpen={!!previewUrl} 
+        onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
+        fileUrl={previewUrl} 
+        title={`Minutes Preview - ${formData.meetingType}`} 
+        type="pdf"
+      />
     </div>
   );
 }

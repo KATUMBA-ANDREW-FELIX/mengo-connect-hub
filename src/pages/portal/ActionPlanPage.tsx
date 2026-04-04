@@ -29,6 +29,7 @@ import { format } from "date-fns";
 import jsPDF from "jspdf";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
+import DocumentViewer from "@/components/portal/DocumentViewer";
 
 interface PlanStep {
   id: string;
@@ -76,6 +77,7 @@ export default function ActionPlanPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Form states
   const [newPlan, setNewPlan] = useState({
@@ -230,9 +232,11 @@ export default function ActionPlanPage() {
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
     doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
-    doc.save(`Council_Strategic_Plan_${Date.now()}.pdf`);
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
     setIsExportOpen(false);
-    toast.success("Strategic report exported!");
+    toast.success("Strategic report preview generated!");
   };
 
   return (
@@ -298,7 +302,7 @@ export default function ActionPlanPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
-                <Button onClick={generatePDFReport}>Generate PDF</Button>
+                <Button onClick={generatePDFReport}>View Preview</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -489,7 +493,14 @@ export default function ActionPlanPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
+          <DocumentViewer 
+        isOpen={!!previewUrl} 
+        onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
+        fileUrl={previewUrl} 
+        title={`Council Strategic Plan`} 
+        type="pdf"
+      />
+    </div>
       )}
     </div>
   );

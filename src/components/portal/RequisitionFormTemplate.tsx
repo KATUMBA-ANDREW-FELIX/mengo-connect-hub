@@ -5,13 +5,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Send, FileText, IndianRupee, Settings2 } from "lucide-react";
+import { Plus, Trash2, Send, FileText, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import jsPDF from "jspdf";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import DocumentViewer from "@/components/portal/DocumentViewer";
+import * as XLSX from "xlsx";
+import { Download, Settings2 } from "lucide-react";
 
 interface BudgetRow { description: string; quantity: number; unitCost: number; amount: number; }
 
@@ -20,6 +23,7 @@ export default function RequisitionFormTemplate({ onSuccess }: { onSuccess: () =
   const [showOfficeSelect, setShowOfficeSelect] = useState(false);
   const [selectedOffice, setSelectedOffice] = useState("");
   const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: "VINE STUDENTS' COUNCIL BODY",
@@ -166,16 +170,45 @@ export default function RequisitionFormTemplate({ onSuccess }: { onSuccess: () =
     try {
       const pdfBlob = await generatePDF();
       const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Voucher_Preview_${formData.department.replace(/\s+/g, "_")}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Voucher Preview downloaded!");
+      setPreviewUrl(url);
+      toast.success("Voucher Preview generated!");
     } catch (e) {
       toast.error("Failed to generate preview");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExcelExport = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+      
+      const basicInfo = [
+        ["Field", "Value"],
+        ["Date", formData.date],
+        ["Dept", formData.department],
+        ["Reason", formData.reason],
+        ["Requested By", formData.requestedBy],
+        ["Total Amount (UGX)", totalAmount],
+        ["Amount in Words", formData.totalInWords],
+      ];
+      const wsInfo = XLSX.utils.aoa_to_sheet(basicInfo);
+      XLSX.utils.book_append_sheet(wb, wsInfo, "Voucher Details");
+
+      if (rows.length > 0) {
+        const wsBudget = XLSX.utils.json_to_sheet(rows.map(r => ({
+          "Description": r.description,
+          "Quantity": r.quantity,
+          "Unit Cost": r.unitCost,
+          "Total Amount": r.amount
+        })));
+        XLSX.utils.book_append_sheet(wb, wsBudget, "Budget Breakdown");
+      }
+
+      XLSX.writeFile(wb, `Requisition_${formData.department.replace(/\s+/g, "_")}.xlsx`);
+      toast.success("Excel exported!");
+    } catch (e) {
+      toast.error("Excel export failed");
     }
   };
 
@@ -275,7 +308,16 @@ export default function RequisitionFormTemplate({ onSuccess }: { onSuccess: () =
           disabled={loading || !formData.reason || !totalAmount}
           className="border-primary text-primary hover:bg-primary/5"
         >
-          <IndianRupee className="mr-2 h-4 w-4"/> Download PDF Voucher
+          <FileText className="mr-2 h-4 w-4"/> View PDF Voucher
+        </Button>
+        <Button 
+          variant="outline" 
+          type="button" 
+          onClick={handleExcelExport} 
+          disabled={loading || !totalAmount}
+          className="border-green-600 text-green-600 hover:bg-green-50"
+        >
+          <Download className="mr-2 h-4 w-4"/> Export to Excel
         </Button>
         <Dialog open={showOfficeSelect} onOpenChange={setShowOfficeSelect}>
           <DialogTrigger asChild>
@@ -298,6 +340,14 @@ export default function RequisitionFormTemplate({ onSuccess }: { onSuccess: () =
           </DialogContent>
         </Dialog>
       </div>
+
+      <DocumentViewer 
+        isOpen={!!previewUrl} 
+        onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
+        fileUrl={previewUrl} 
+        title={`Voucher Preview - ${formData.department}`} 
+        type="pdf"
+      />
     </div>
   );
 }

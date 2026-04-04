@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Scale, Plus, AlertCircle, FileText, CheckCircle2, Clock, Send, ShieldCheck } from "lucide-react";
+import DocumentViewer from "@/components/portal/DocumentViewer";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +43,7 @@ export default function DisciplinaryPage() {
   const [submitting, setSubmitting] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const fetchCases = async () => {
     try {
@@ -175,9 +177,11 @@ export default function DisciplinaryPage() {
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
     doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
-    doc.save(`DC_Cases_Report_${Date.now()}.pdf`);
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
     setIsExportOpen(false);
-    toast.success("DC report exported!");
+    toast.success("DC case report preview generated!");
   };
 
   const getStatusIcon = (status: string) => {
@@ -203,7 +207,7 @@ export default function DisciplinaryPage() {
         <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" disabled={cases.length === 0}>
-              <FileText className="mr-2 h-4 w-4" /> Export Case Report
+              <FileText className="mr-2 h-4 w-4" /> Export Report
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
@@ -224,7 +228,7 @@ export default function DisciplinaryPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
-              <Button onClick={generatePDFReport}>Generate PDF</Button>
+              <Button onClick={generatePDFReport}>View Preview</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -400,6 +404,13 @@ export default function DisciplinaryPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      <DocumentViewer 
+        isOpen={!!previewUrl} 
+        onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
+        fileUrl={previewUrl} 
+        title={`DC Case Report`} 
+        type="pdf"
+      />
     </div>
   );
 }

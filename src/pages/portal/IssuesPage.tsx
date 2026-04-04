@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, Plus, MoreHorizontal, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import DocumentViewer from "@/components/portal/DocumentViewer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +42,7 @@ export default function IssuesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -169,9 +171,11 @@ export default function IssuesPage() {
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
     doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
-    doc.save(`Council_Issues_Report_${Date.now()}.pdf`);
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
     setIsExportOpen(false);
-    toast.success("Issues report exported!");
+    toast.success("Issues report preview generated!");
   };
 
   return (
@@ -185,7 +189,7 @@ export default function IssuesPage() {
           <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" disabled={filteredIssues.length === 0}>
-                <FileText className="mr-1 h-4 w-4" /> Export PDF
+                <FileText className="mr-1 h-4 w-4" /> Export Report
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
@@ -206,7 +210,7 @@ export default function IssuesPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
-                <Button onClick={generatePDFReport}>Generate PDF</Button>
+                <Button onClick={generatePDFReport}>View Preview</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -333,6 +337,13 @@ export default function IssuesPage() {
           ))}
         </div>
       )}
+      <DocumentViewer 
+        isOpen={!!previewUrl} 
+        onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
+        fileUrl={previewUrl} 
+        title={`Council Issues Report`} 
+        type="pdf"
+      />
     </div>
   );
 }
