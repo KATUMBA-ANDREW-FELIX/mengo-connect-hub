@@ -55,8 +55,7 @@ export const MasonryGallery: React.FC<MasonryGalleryProps> = ({ images }) => {
 
       {/* 3D Tilted Grid */}
       <div
-        className="relative w-full h-[500px] sm:h-[600px] overflow-hidden cursor-grab active:cursor-grabbing touch-none select-none"
-        style={{ perspective: "1200px" }}
+        className="relative w-full h-[500px] sm:h-[600px] overflow-hidden cursor-grab active:cursor-grabbing touch-none select-none perspective-1200"
         {...bind()}
       >
         <motion.div
@@ -68,14 +67,7 @@ export const MasonryGallery: React.FC<MasonryGalleryProps> = ({ images }) => {
           }}
         >
           {/* The tilted grid plane */}
-          <div
-            className="grid gap-3 sm:gap-4"
-            style={{
-              gridTemplateColumns: `repeat(${cols}, 120px)`,
-              gridAutoRows: "120px",
-              transform: "rotate(-12deg) scale(1.1)",
-            }}
-          >
+          <div className="grid gap-3 sm:gap-4 masonry-grid-plane">
             {gridImages.map((img, i) => {
               const row = Math.floor(i / cols);
               const col = i % cols;
