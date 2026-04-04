@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil, Lock, Upload, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,6 +51,9 @@ export default function ElectionsPage() {
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportType, setExportType] = useState<"qualified" | "ballot" | "screening">("qualified");
+  const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
 
   // Excel Upload
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -535,9 +538,11 @@ export default function ElectionsPage() {
       y += 8;
     });
 
-    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+    doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
     doc.save(`${getDynamicTitle().replace(/\s+/g, '_')}_Qualified_List.pdf`);
+    setIsExportOpen(false);
     toast.success("Qualified List PDF downloaded!");
   };
 
@@ -636,9 +641,10 @@ export default function ElectionsPage() {
 
     doc.setPage(doc.getNumberOfPages());
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+    doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
     doc.save(`${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
+    setIsExportOpen(false);
     toast.success("Ballot PDF downloaded!");
   };
 
@@ -707,9 +713,10 @@ export default function ElectionsPage() {
     });
 
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 200, { align: "center" });
+    doc.text(exportFooterText, pageW / 2, 200, { align: "center" });
 
     doc.save(`Screening_Report_${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
+    setIsExportOpen(false);
     toast.success("Screening Report PDF downloaded!");
   };
 
@@ -875,17 +882,47 @@ export default function ElectionsPage() {
             </DialogContent>
           </Dialog>
 
-          <Button size="sm" variant="outline" onClick={generateScreeningReportPDF}>
-            <Download className="mr-1 h-4 w-4" /> Report PDF
-          </Button>
-          <Button size="sm" variant="outline" onClick={generateQualifiedPDF}>
-            <Download className="mr-1 h-4 w-4" /> Qualified List
-          </Button>
-          <Button size="sm" variant="outline" onClick={generateBallotPDF}>
-            <Download className="mr-1 h-4 w-4" /> Ballot PDF
-          </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+            <Button variant="outline" size="sm" onClick={() => { setExportType("qualified"); setIsExportOpen(true); }} className="w-full">
+              <FileText className="mr-1 h-4 w-4" /> Qualified List
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setExportType("ballot"); setIsExportOpen(true); }} className="w-full">
+              <Download className="mr-1 h-4 w-4" /> Generate Ballot
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setExportType("screening"); setIsExportOpen(true); }} className="w-full">
+              <FileText className="mr-1 h-4 w-4" /> Full Screening
+            </Button>
+          </div>
         </div>
       </div>
+
+      <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Election Report</DialogTitle>
+            <DialogDescription>Customize your report footer before downloading.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="footerText">Document Footer Slogan</Label>
+              <Input 
+                id="footerText" 
+                value={exportFooterText} 
+                onChange={e => setExportFooterText(e.target.value)} 
+                placeholder="e.g. ANOINTED TO BEAR FRUIT"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+            <Button onClick={() => {
+              if (exportType === "qualified") generateQualifiedPDF();
+              else if (exportType === "ballot") generateBallotPDF();
+              else generateScreeningReportPDF();
+            }}>Generate PDF</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={!!editingId} onOpenChange={(open) => !open && setEditingId(null)}>

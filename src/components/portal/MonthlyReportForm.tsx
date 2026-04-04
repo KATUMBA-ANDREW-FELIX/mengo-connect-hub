@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Save, Send, FileText } from "lucide-react";
+import { Plus, Trash2, Save, Send, FileText, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import jsPDF from "jspdf";
@@ -22,6 +22,7 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
   const [loading, setLoading] = useState(false);
   const [showOfficeSelect, setShowOfficeSelect] = useState(false);
   const [selectedOffice, setSelectedOffice] = useState("");
+  const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
   
   // Section 1: Basic Details
   const [formData, setFormData] = useState({
@@ -162,7 +163,7 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
 
     // Footer
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+    doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
     return doc.output("blob");
   };
@@ -340,6 +341,25 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
           <div className="space-y-2"><Label>Monitress</Label><Input value={formData.monitress} onChange={e => setFormData({...formData, monitress: e.target.value})} /></div>
           <div className="space-y-2"><Label>Student 1</Label><Input value={formData.student1} onChange={e => setFormData({...formData, student1: e.target.value})} /></div>
           <div className="space-y-2"><Label>Student 2</Label><Input value={formData.student2} onChange={e => setFormData({...formData, student2: e.target.value})} /></div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+            <Settings2 className="h-4 w-4" /> Document Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-1">
+            <Label>Document Footer Slogan</Label>
+            <Input 
+              value={exportFooterText} 
+              onChange={e => setExportFooterText(e.target.value)} 
+              placeholder="e.g. ANOINTED TO BEAR FRUIT"
+              className="bg-background font-bold text-red-700"
+            />
+          </div>
         </CardContent>
       </Card>
 

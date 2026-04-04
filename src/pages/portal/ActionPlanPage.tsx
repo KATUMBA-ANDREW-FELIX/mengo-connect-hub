@@ -74,6 +74,8 @@ export default function ActionPlanPage() {
   const [plans, setPlans] = useState<ActionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
 
   // Form states
   const [newPlan, setNewPlan] = useState({
@@ -226,9 +228,10 @@ export default function ActionPlanPage() {
     });
 
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+    doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
     doc.save(`Council_Strategic_Plan_${Date.now()}.pdf`);
+    setIsExportOpen(false);
     toast.success("Strategic report exported!");
   };
 
@@ -271,9 +274,34 @@ export default function ActionPlanPage() {
           <Briefcase className="w-5 h-5 text-primary" /> Current Action Items
         </h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={generatePDFReport} disabled={plans.length === 0} className="border-primary/20 text-primary">
-            <FileText className="w-4 h-4 mr-2" /> Export Report
-          </Button>
+          <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" disabled={plans.length === 0} className="border-primary/20 text-primary">
+                <FileText className="w-4 h-4 mr-2" /> Export Report
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Export Strategic Report</DialogTitle>
+                <DialogDescription>Customize your report footer before downloading.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="footerText">Document Footer Slogan</Label>
+                  <Input 
+                    id="footerText" 
+                    value={exportFooterText} 
+                    onChange={e => setExportFooterText(e.target.value)} 
+                    placeholder="e.g. ANOINTED TO BEAR FRUIT"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+                <Button onClick={generatePDFReport}>Generate PDF</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button className="shadow-lg hover:shadow-primary/20 transition-all">

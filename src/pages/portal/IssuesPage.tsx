@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, Plus, MoreHorizontal, FileText } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +39,8 @@ export default function IssuesPage() {
   const [category, setCategory] = useState("Infrastructure");
   const [priority, setPriority] = useState("Medium");
   const [submitting, setSubmitting] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
 
   const [statusFilter, setStatusFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -165,9 +167,10 @@ export default function IssuesPage() {
     });
 
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+    doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
     doc.save(`Council_Issues_Report_${Date.now()}.pdf`);
+    setIsExportOpen(false);
     toast.success("Issues report exported!");
   };
 
@@ -179,9 +182,34 @@ export default function IssuesPage() {
           <p className="text-sm text-muted-foreground">Track issues raised by councillors.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={generatePDFReport} disabled={filteredIssues.length === 0}>
-            <FileText className="mr-1 h-4 w-4" /> Export PDF
-          </Button>
+          <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" disabled={filteredIssues.length === 0}>
+                <FileText className="mr-1 h-4 w-4" /> Export PDF
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Export Issues Report</DialogTitle>
+                <DialogDescription>Customize your report footer before downloading.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="footerText">Document Footer Slogan</Label>
+                  <Input 
+                    id="footerText" 
+                    value={exportFooterText} 
+                    onChange={e => setExportFooterText(e.target.value)} 
+                    placeholder="e.g. ANOINTED TO BEAR FRUIT"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+                <Button onClick={generatePDFReport}>Generate PDF</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Raise Issue</Button>

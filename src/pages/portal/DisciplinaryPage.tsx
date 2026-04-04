@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Scale, Plus, AlertCircle, FileText, CheckCircle2, Clock, Send, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -39,6 +40,8 @@ export default function DisciplinaryPage() {
   const [customCategory, setCustomCategory] = useState("");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
 
   const fetchCases = async () => {
     try {
@@ -170,9 +173,10 @@ export default function DisciplinaryPage() {
     });
 
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+    doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
     doc.save(`DC_Cases_Report_${Date.now()}.pdf`);
+    setIsExportOpen(false);
     toast.success("DC report exported!");
   };
 
@@ -196,9 +200,34 @@ export default function DisciplinaryPage() {
           </h1>
           <p className="text-muted-foreground text-sm">Case management and disciplinary records.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={generatePDFReport} disabled={cases.length === 0}>
-          <FileText className="mr-2 h-4 w-4" /> Export Case Report
-        </Button>
+        <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" disabled={cases.length === 0}>
+              <FileText className="mr-2 h-4 w-4" /> Export Case Report
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Export Disciplinary Report</DialogTitle>
+              <DialogDescription>Customize your report footer before downloading.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="footerText">Document Footer Slogan</Label>
+                <Input 
+                  id="footerText" 
+                  value={exportFooterText} 
+                  onChange={e => setExportFooterText(e.target.value)} 
+                  placeholder="e.g. ANOINTED TO BEAR FRUIT"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+              <Button onClick={generatePDFReport}>Generate PDF</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs defaultValue="active" className="w-full">

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   CheckCircle, Search, XCircle, ExternalLink, Clock,
@@ -72,6 +72,8 @@ export default function StudentVoicesPage() {
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
 
   const fetchVoices = async () => {
     try {
@@ -224,9 +226,10 @@ export default function StudentVoicesPage() {
     });
 
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+    doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
     doc.save(`Student_Voices_Report_${Date.now()}.pdf`);
+    setIsExportOpen(false);
     toast.success("Voices report exported!");
   };
 
@@ -302,14 +305,39 @@ export default function StudentVoicesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="font-serif text-xl font-bold sm:text-2xl">Student Voices</h1>
           <p className="text-sm text-muted-foreground">Review and evaluate submissions.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={generatePDFReport} disabled={filtered.length === 0}>
-          <FileText className="mr-2 h-4 w-4" /> Export Report
-        </Button>
+        <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" disabled={filtered.length === 0}>
+              <FileText className="mr-2 h-4 w-4" /> Export Report
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Export Voices Report</DialogTitle>
+              <DialogDescription>Customize your report footer before downloading.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <label htmlFor="footerText" className="text-xs font-bold uppercase text-muted-foreground">Document Footer Slogan</label>
+                <Input 
+                  id="footerText" 
+                  value={exportFooterText} 
+                  onChange={e => setExportFooterText(e.target.value)} 
+                  placeholder="e.g. ANOINTED TO BEAR FRUIT"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+              <Button onClick={generatePDFReport}>Generate PDF</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="flex gap-1 flex-wrap">

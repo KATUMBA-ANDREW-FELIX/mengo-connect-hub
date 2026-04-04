@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Send, FileText, Users, Clock } from "lucide-react";
+import { Plus, Trash2, Send, FileText, Users, Clock, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import jsPDF from "jspdf";
@@ -20,6 +20,7 @@ export default function MinutesFormTemplate({ onSuccess }: { onSuccess: () => vo
   const [loading, setLoading] = useState(false);
   const [showOfficeSelect, setShowOfficeSelect] = useState(false);
   const [selectedOffice, setSelectedOffice] = useState("");
+  const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
 
   const [formData, setFormData] = useState({
     meetingType: "Cabinet Meeting",
@@ -141,7 +142,7 @@ export default function MinutesFormTemplate({ onSuccess }: { onSuccess: () => vo
     doc.text("SIGN: ________________", pageW / 2 + 5, y);
 
     doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+    doc.text(exportFooterText, pageW / 2, 285, { align: "center" });
 
     doc.setTextColor(180, 180, 180); doc.setFont("helvetica", "normal"); doc.setFontSize(7);
     doc.text("Designed & Initiated by Katumba Andrew Felix", pageW / 2, 292, { align: "center" });
@@ -268,6 +269,25 @@ export default function MinutesFormTemplate({ onSuccess }: { onSuccess: () => vo
         <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
            <div className="space-y-1"><Label>Chairperson *</Label><Input value={formData.chairperson} onChange={e => setFormData({...formData, chairperson: e.target.value})} /></div>
            <div className="space-y-1"><Label>Secretary *</Label><Input value={formData.secretary} onChange={e => setFormData({...formData, secretary: e.target.value})} /></div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+            <Settings2 className="h-4 w-4" /> Document Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-1">
+            <Label>Document Footer Slogan</Label>
+            <Input 
+              value={exportFooterText} 
+              onChange={e => setExportFooterText(e.target.value)} 
+              placeholder="e.g. ANOINTED TO BEAR FRUIT"
+              className="bg-background font-bold text-red-700"
+            />
+          </div>
         </CardContent>
       </Card>
 
