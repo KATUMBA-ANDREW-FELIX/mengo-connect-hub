@@ -17,6 +17,12 @@ export default function SettingsPage() {
   const [profilePic, setProfilePic] = useState((profile as any)?.profile_pic || "");
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -41,6 +47,37 @@ export default function SettingsPage() {
       toast.error("Failed to update profile");
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("Please fill all password fields");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await api.post('/users/change-password/', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      toast.success("Password changed successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to update password");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -87,6 +124,53 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Editable Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Security</CardTitle>
+          <CardDescription>Change your account password.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Current Password</Label>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={currentPassword}
+              onChange={e => setCurrentPassword(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>New Password</Label>
+              <Input
+                type="password"
+                placeholder="Min. 6 chars"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirm New Password</Label>
+              <Input
+                type="password"
+                placeholder="Confirm"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          <Button 
+            variant="outline"
+            className="border-primary/20 text-primary hover:bg-primary/5"
+            onClick={handleChangePassword} 
+            disabled={changingPassword}
+          >
+            {changingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Update Password
+          </Button>
         </CardContent>
       </Card>
 

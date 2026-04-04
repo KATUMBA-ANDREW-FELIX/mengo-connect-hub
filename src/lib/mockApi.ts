@@ -195,6 +195,42 @@ export function setupMockApi(api: AxiosInstance) {
     return [404, { detail: "User not found" }];
   });
 
+  mock.onPost('/users/change-password/').reply((config) => {
+    const token = config.headers?.Authorization;
+    const username = token?.split('-').pop();
+    const { current_password, new_password } = JSON.parse(config.data);
+    
+    if (username && USERS[username]) {
+      if (USERS[username].password !== current_password) {
+        return [400, { detail: "Current password incorrect" }];
+      }
+      USERS[username].password = new_password;
+      return [200, { message: "Password updated successfully" }];
+    }
+    return [401, {}];
+  });
+
+  mock.onPost('/users/forgot-password/').reply((config) => {
+    const { username } = JSON.parse(config.data);
+    const u = USERS[username.toLowerCase()];
+    if (!u) return [404, { detail: "User not found" }];
+
+    // Create notification for admin and patron
+    const adminNotif = {
+      id: Math.random().toString(36).substr(2, 9),
+      title: "Password Reset Request",
+      message: `User ${u.profile.full_name} (${username}) has requested a password reset. Please provide a new temporary password.`,
+      type: "urgent_alert",
+      read: false,
+      created_at: new Date().toISOString(),
+      user_id: "usr_admin" // Direct to admin
+    };
+    const patronNotif = { ...adminNotif, id: Math.random().toString(36).substr(2, 9), user_id: "usr_patron" };
+    
+    MOCK_NOTIFICATIONS.push(adminNotif, patronNotif);
+    return [200, { message: "Reset request sent to Administration" }];
+  });
+
   mock.onGet(/\/users\/councillors\/?$/).reply(() => {
     return [200, { results: Object.values(USERS).map(u => ({ ...u.profile, roles: u.roles })) }];
   });

@@ -11,6 +11,14 @@ Here is the complete list of all the endpoints the React frontend expects the Dj
 - `GET /api/users/all-roles/` : Returns an array of all assigned user roles (used in Hierarchy Tree).
 - `GET /api/users/all-profiles/` : Returns basic profile info mapped by user ID for looking up names.
 - `POST /api/users/upgrade-role/` : Updates a user's cabinet position. Payload: `{ user_id, new_role }`.
+- `POST /api/users/change-password/` : Allows a user to update their password. Payload: `{ current_password, new_password }`.
+- `POST /api/users/forgot-password/` : Requests a password reset. Payload: `{ username }`.
+
+> [!IMPORTANT]
+> **Password Management Protocol**: 
+> 1. New members are registered with a **temporary password** set by the Admin.
+> 2. Members are expected to change this password immediately via the **Security** section in their profile settings.
+> 3. If a user forgets their password, the `forgot-password` endpoint must trigger an **Urgent Notification** to the **Admin Absolute** and **Patron** to regenerate a new temporary password for that user.
 
 > [!IMPORTANT]
 > **Automatic Role Swapping**: The base level for students is `councillor`. If a leadership position (e.g., Chairperson, Speaker) is assigned to a user, the backend **must automatically** demote the current holder of that position to a regular `councillor`. Only one user can hold a leadership position at a time.
